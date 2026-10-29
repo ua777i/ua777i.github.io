@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Карта с кругами и центрами</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+:root{--accent:#1677ff;--line:#d8e0ea;--ink:#17212f;--muted:#65758b}
+*{box-sizing:border-box}html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink)}
+.app{display:grid;grid-template-columns:360px 1fr;height:100%;min-height:600px}.sidebar{padding:20px;background:#fff;border-right:1px solid var(--line);overflow:auto;z-index:500}
+h1{font-size:22px;line-height:1.2;margin:0 0 8px;font-weight:750;letter-spacing:-.4px}.intro{font-size:13px;line-height:1.45;color:var(--muted);margin:0 0 15px}
+label,.label{display:block;font-size:13px;font-weight:650;margin:13px 0 6px}input,select,button{font:inherit}
+input[type=text],input[type=number],select{width:100%;height:39px;border:1px solid var(--line);border-radius:9px;padding:0 10px;background:#fff;color:var(--ink);outline:none}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px #1677ff1a}
+.searchrow{display:flex;gap:7px}.searchrow input{min-width:0}.searchrow button{width:42px;flex:0 0 42px}
+button{border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px;cursor:pointer;font-weight:650;color:var(--ink)}button:hover{filter:brightness(.97)}button.primary{background:var(--accent);border-color:var(--accent);color:white}button:disabled{opacity:.55;cursor:wait}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.colors{display:flex;gap:9px;flex-wrap:wrap;padding:3px 0}
+.swatch{width:25px;height:25px;border-radius:50%;padding:0;border:2px solid #fff;box-shadow:0 0 0 1px #ccd5e1;min-width:25px}.swatch.active{box-shadow:0 0 0 2px var(--accent);border:3px solid white}
+.opacityrow{display:flex;align-items:center;gap:10px}.opacityrow input{flex:1;accent-color:var(--accent)}.opacityrow span{width:36px;text-align:right;font-size:12px}
+.sectionhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:18px}.sectionhead .label{margin:0}.sectionhead button{padding:7px 9px;font-size:12px}
+.circlelist{display:grid;gap:6px;margin-top:9px}.circleitem{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:8px;background:#fff}.circleitem.selected{border-color:var(--accent);background:#f2f7ff}.circleitem .mini{width:13px;height:13px;border-radius:50%;flex:0 0 13px}.circleitem .choose{flex:1;text-align:left;border:0;background:transparent;padding:2px 0;font-size:13px;min-width:0}.circleitem .delete{padding:4px 7px;color:#b42318}
+.info{background:#f7f9fc;border:1px solid var(--line);border-radius:11px;padding:11px;margin-top:14px;font-size:12px}.infoitem{display:flex;gap:8px;align-items:flex-start;margin:3px 0 10px}.infoitem:last-child{margin-bottom:1px}.doticon{width:20px;flex:0 0 20px;color:var(--muted);font-size:15px;text-align:center}.info strong{display:block;font-size:12px;margin-bottom:3px}.info small{font-size:12px;color:var(--muted);word-break:break-word}
+.actions{display:grid;gap:7px;margin-top:12px}.actions button{min-height:39px;font-size:13px}.note{font-size:11px;color:#8491a3;line-height:1.4;margin-top:12px}.status{font-size:12px;color:var(--muted);min-height:17px;margin-top:6px}
+#map{height:100%;width:100%;background:#e8eef4}.center-dot{width:16px;height:16px;border:3px solid #fff;border-radius:50%;box-shadow:0 1px 5px #0007}
+.leaflet-control-attribution{font-size:10px!important}.leaflet-control-layers{font-size:13px}
+@media(max-width:760px){.app{grid-template-columns:1fr;grid-template-rows:auto minmax(390px,1fr);height:auto;min-height:100%}.sidebar{border-right:0;border-bottom:1px solid var(--line);overflow:visible;padding:16px}#map{height:58vh;min-height:390px}}
+</style>
+</head>
+<body>
+<div class="app"><aside class="sidebar">
+<h1>Карта с кругами и центрами</h1>
+<p class="intro">Добавляйте несколько кругов. У каждого свои центр, радиус и цвет; цвет центральной точки совпадает с цветом круга.</p>
+<label for="place">Адрес или место для выбранного круга</label>
+<div class="searchrow"><input id="place" type="text" placeholder="Введите адрес или название"><button id="find" title="Найти адрес">⌕</button></div>
+<div class="sectionhead"><span class="label">Круги на карте</span><button class="primary" id="add">＋ Добавить круг</button></div>
+<div id="circleList" class="circlelist"></div>
+<div class="grid2">
+<div><label for="radius">Радиус</label><input id="radius" type="number" min="1" max="2000000" step="1" value="1000"></div>
+<div><label for="units">Единицы</label><select id="units"><option value="m">метры</option><option value="km">километры</option><option value="mi">мили</option></select></div>
+</div>
+<label>Цвет выбранного круга и точки</label>
+<div class="colors" id="colors">
+<button class="swatch active" data-color="#1677ff" style="background:#1677ff" title="Синий" aria-label="Синий"></button>
+<button class="swatch" data-color="#e53935" style="background:#e53935" title="Красный" aria-label="Красный"></button>
+<button class="swatch" data-color="#16a34a" style="background:#16a34a" title="Зелёный" aria-label="Зелёный"></button>
+<button class="swatch" data-color="#f59e0b" style="background:#f59e0b" title="Оранжевый" aria-label="Оранжевый"></button>
+<button class="swatch" data-color="#9333ea" style="background:#9333ea" title="Фиолетовый" aria-label="Фиолетовый"></button>
+<button class="swatch" data-color="#06b6d4" style="background:#06b6d4" title="Бирюзовый" aria-label="Бирюзовый"></button>
+<button class="swatch" data-color="#64748b" style="background:#64748b" title="Серый" aria-label="Серый"></button>
+</div>
+<label for="opacity">Прозрачность заливки выбранного круга</label>
+<div class="opacityrow"><input id="opacity" type="range" min="5" max="80" value="35"><span id="opacityVal">35%</span></div>
+<div class="grid2">
+<div><label for="lat">Широта центра</label><input id="lat" type="number" step="any" value="51.5336"></div>
+<div><label for="lng">Долгота центра</label><input id="lng" type="number" step="any" value="46.0343"></div>
+</div>
+<div class="info">
+<div class="infoitem"><div class="doticon">●</div><div><strong>Центр выбранного круга</strong><small id="coords">51.533600, 46.034300</small></div><button id="copyCoords" title="Скопировать координаты" style="padding:3px 7px;margin-left:auto">⧉</button></div>
+<div class="infoitem"><div class="doticon">◎</div><div><strong>Радиус</strong><small id="radiusText">1 000 м (1 км)</small></div></div>
+</div>
+<div class="actions"><button class="primary" id="share">↗ Скопировать ссылку со всеми кругами</button><button id="download">↓ Сохранить карту как изображение</button><button id="reset">Вернуть исходный вид</button></div>
+<div class="status" id="status" role="status"></div>
+<p class="note">Перетащите точку, щёлкните по карте или введите координаты. Переключение «Карта / Спутник / Гибрид» находится в правом верхнем углу карты. Используется Leaflet и открытые картографические слои; для поиска адресов нужен интернет.</p>
+</aside><main id="map" aria-label="Карта"></main></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+(() => {
+ const $=id=>document.getElementById(id), defaultCenter=[51.5336,46.0343];
+ const palette=['#1677ff','#e53935','#16a34a','#f59e0b','#9333ea','#06b6d4','#64748b'];
+ let circles=[],selectedId=null,nextId=1;
+ const map=L.map('map',{preferCanvas:true}).setView(defaultCenter,13);
+ const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'});
+ const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri'});
+ const labels=L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Labels &copy; Esri'});
+ const hybrid=L.layerGroup([satellite,labels]);
+ const baseLayers={'Карта':street,'Спутник':satellite,'Гибрид':hybrid};
+ street.addTo(map);L.control.layers(baseLayers,null,{collapsed:false,position:'topright'}).addTo(map);
+ const status=msg=>$('status').textContent=msg;
+ const num=v=>Number(v).toLocaleString('ru-RU',{maximumFractionDigits:3});
+ const getSelected=()=>circles.find(c=>c.id===selectedId);
+ function radiusMeters(c=getSelected()){if(!c)return 1000;return Math.max(1,Number(c.radius)||1)*({m:1,km:1000,mi:1609.344}[c.unit]||1)}
+ function radiusLabel(c){const m=radiusMeters(c);return `${num(m)} м (${(m/1000).toLocaleString('ru-RU',{maximumFractionDigits:3})} км)`}
+ function markerIcon(color){return L.divIcon({className:'',html:`<div class="center-dot" style="background:${color}"></div>`,iconSize:[16,16],iconAnchor:[8,8]})}
+ function makeCircle(lat,lng,opts={}) {
+   const id=nextId++, c={id,lat,lng,radius:opts.radius||1000,unit:opts.unit||'m',color:opts.color||palette[(id-1)%palette.length],opacity:opts.opacity??35,marker:null,shape:null};
+   c.shape=L.circle([lat,lng],{radius:radiusMeters(c),color:c.color,weight:3,fillColor:c.color,fillOpacity:c.opacity/100}).addTo(map);
+   c.marker=L.marker([lat,lng],{icon:markerIcon(c.color),draggable:true,title:'Центр круга '+id}).addTo(map);
+   c.marker.on('drag',e=>{c.lat=e.target.getLatLng().lat;c.lng=e.target.getLatLng().lng;c.shape.setLatLng([c.lat,c.lng]);if(c.id===selectedId)syncInputs();});
+   c.marker.on('dragend',()=>{if(c.id===selectedId)syncInputs();updateUrl();renderList();});
+   c.shape.on('click',()=>selectCircle(c.id));
+   circles.push(c);return c;
+ }
+ function updateShape(c){c.shape.setLatLng([c.lat,c.lng]);c.shape.setRadius(radiusMeters(c));c.shape.setStyle({color:c.color,fillColor:c.color,fillOpacity:c.opacity/100});c.marker.setLatLng([c.lat,c.lng]);c.marker.setIcon(markerIcon(c.color));}
+ function syncInputs(){
+   const c=getSelected();if(!c)return;
+   $('radius').value=c.radius;$('units').value=c.unit;$('opacity').value=c.opacity;$('opacityVal').textContent=c.opacity+'%';
+   $('lat').value=c.lat.toFixed(6);$('lng').value=c.lng.toFixed(6);$('coords').textContent=`${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`;
+   $('radiusText').textContent=radiusLabel(c);
+   document.querySelectorAll('.swatch').forEach(b=>b.classList.toggle('active',b.dataset.color===c.color));
+ }
+ function renderList(){
+   const box=$('circleList');box.innerHTML='';
+   circles.forEach((c,i)=>{
+     const row=document.createElement('div');row.className='circleitem'+(c.id===selectedId?' selected':'');
+     const dot=document.createElement('span');dot.className='mini';dot.style.background=c.color;
+     const choose=document.createElement('button');choose.className='choose';choose.textContent=`Круг ${i+1} · ${radiusLabel(c)}`;choose.title='Выбрать этот круг';choose.onclick=()=>selectCircle(c.id,true);
+     const del=document.createElement('button');del.className='delete';del.textContent='×';del.title='Удалить круг';del.setAttribute('aria-label','Удалить круг '+(i+1));del.onclick=()=>removeCircle(c.id);
+     row.append(dot,choose,del);box.append(row);
+   });
+ }
+ function selectCircle(id,pan=false){selectedId=id;const c=getSelected();if(!c)return;syncInputs();renderList();if(pan)map.panTo([c.lat,c.lng]);}
+ function removeCircle(id){const c=circles.find(x=>x.id===id);if(!c)return;map.removeLayer(c.marker);map.removeLayer(c.shape);circles=circles.filter(x=>x.id!==id);if(!circles.length){const center=map.getCenter();const n=makeCircle(center.lat,center.lng);selectedId=n.id;}else if(selectedId===id)selectedId=circles[circles.length-1].id;selectCircle(selectedId);updateUrl();}
+ function updateSelected(){
+   const c=getSelected();if(!c)return;
+   c.radius=Math.max(1,Number($('radius').value)||1);c.unit=$('units').value;c.opacity=Number($('opacity').value);
+   updateShape(c);syncInputs();renderList();updateUrl();
+ }
+ function applyCoordinates(){
+   const c=getSelected(),lat=Number($('lat').value),lng=Number($('lng').value);
+   if(Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180){c.lat=lat;c.lng=lng;updateShape(c);syncInputs();map.panTo([lat,lng]);updateUrl();status('');}
+   else status('Проверьте координаты: широта от −90 до 90, долгота от −180 до 180.');
+ }
+ $('radius').addEventListener('input',updateSelected);$('units').addEventListener('change',updateSelected);$('opacity').addEventListener('input',updateSelected);
+ $('lat').addEventListener('change',applyCoordinates);$('lng').addEventListener('change',applyCoordinates);
+ $('colors').addEventListener('click',e=>{const b=e.target.closest('[data-color]');if(!b)return;const c=getSelected();c.color=b.dataset.color;updateShape(c);syncInputs();renderList();updateUrl();});
+ map.on('click',e=>{const c=getSelected();c.lat=e.latlng.lat;c.lng=e.latlng.lng;updateShape(c);syncInputs();renderList();updateUrl();});
+ $('add').addEventListener('click',()=>{
+   const center=map.getCenter(),c=makeCircle(center.lat,center.lng,{radius:1000,unit:'m',color:palette[circles.length%palette.length],opacity:35});
+   selectedId=c.id;map.panTo(center);syncInputs();renderList();updateUrl();status('Добавлен новый круг. Перетащите его точку или задайте адрес/координаты.');
+ });
+ async function geocode(){
+   const q=$('place').value.trim();if(!q){status('Введите адрес или название места.');return;}
+   $('find').disabled=true;status('Ищу адрес…');
+   try{const res=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q='+encodeURIComponent(q),{headers:{'Accept-Language':'ru'}});
+     if(!res.ok)throw Error();const data=await res.json();if(!data.length){status('Адрес не найден. Уточните запрос или введите координаты.');return;}
+     const c=getSelected();c.lat=Number(data[0].lat);c.lng=Number(data[0].lon);updateShape(c);map.setView([c.lat,c.lng],15);syncInputs();renderList();updateUrl();status(data[0].display_name||'Адрес найден');
+   }catch(e){status('Не удалось найти адрес. Проверьте интернет или введите координаты вручную.');}finally{$('find').disabled=false;}
+ }
+ $('find').addEventListener('click',geocode);$('place').addEventListener('keydown',e=>{if(e.key==='Enter')geocode();});
+ $('copyCoords').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('coords').textContent);status('Координаты скопированы.')}catch(e){status('Координаты: '+$('coords').textContent)}});
+ function state(){return {v:2,base:Object.keys(baseLayers).find(k=>map.hasLayer(baseLayers[k]))||'Карта',zoom:map.getZoom(),circles:circles.map(c=>({lat:c.lat,lng:c.lng,radius:c.radius,unit:c.unit,color:c.color,opacity:c.opacity})),selected:Math.max(0,circles.findIndex(c=>c.id===selectedId))};}
+ function updateUrl(){try{const u=new URL(location.href);u.searchParams.set('data',btoa(unescape(encodeURIComponent(JSON.stringify(state())))));history.replaceState(null,'',u.toString());}catch(e){}}
+ $('share').addEventListener('click',async()=>{const u=new URL(location.href);u.searchParams.set('data',btoa(unescape(encodeURIComponent(JSON.stringify(state())))));const link=u.toString();try{await navigator.clipboard.writeText(link);status('Ссылка со всеми кругами и типом карты скопирована.')}catch(e){prompt('Скопируйте ссылку:',link)}});
+ $('download').addEventListener('click',async()=>{if(typeof html2canvas!=='function'){window.print();return;}status('Готовлю изображение карты…');try{const canvas=await html2canvas($('map'),{useCORS:true,logging:false,scale:2});const a=document.createElement('a');a.download='karta-s-krugami.png';a.href=canvas.toDataURL('image/png');a.click();status('Изображение подготовлено. Некоторые картографические слои могут не экспортироваться из-за ограничений источника.')}catch(e){status('Экспорт ограничен источником картографических тайлов. Попробуйте печать браузера.')}});
+ $('reset').addEventListener('click',()=>{circles.forEach(c=>{map.removeLayer(c.marker);map.removeLayer(c.shape)});circles=[];nextId=1;const c=makeCircle(...defaultCenter);selectedId=c.id;street.addTo(map);map.setView(defaultCenter,13);syncInputs();renderList();updateUrl();status('')});
+ function loadState(){
+   let loaded=false;const p=new URLSearchParams(location.search);
+   try{if(p.has('data')){const s=JSON.parse(decodeURIComponent(escape(atob(p.get('data')))));if(s.v===2&&Array.isArray(s.circles)&&s.circles.length){circles=[];s.circles.slice(0,50).forEach(x=>{if(Number.isFinite(x.lat)&&Number.isFinite(x.lng)&&Math.abs(x.lat)<=90&&Math.abs(x.lng)<=180){makeCircle(x.lat,x.lng,x)}});if(circles.length){selectedId=circles[Math.min(circles.length-1,Math.max(0,s.selected||0))].id;map.setView(circles[0].marker.getLatLng(),Math.min(18,Math.max(2,s.zoom||13)));if(baseLayers[s.base]){Object.values(baseLayers).forEach(l=>map.removeLayer(l));baseLayers[s.base].addTo(map)}loaded=true;}}}}catch(e){}
+   if(!loaded){makeCircle(...defaultCenter);selectedId=circles[0].id;}
+   syncInputs();renderList();
+ }
+ loadState();
+})();
+</script>
+</body></html>
