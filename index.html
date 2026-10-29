@@ -5,152 +5,1009 @@
 <title>Карта с кругами и центрами</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <style>
-:root{--accent:#1677ff;--line:#d8e0ea;--ink:#17212f;--muted:#65758b}
+:root{--accent:#1677ff;--line:#d8e0ea;--ink:#17212f;--muted:#65758b;--bg:#f7f9fc}
 *{box-sizing:border-box}html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink)}
-.app{display:grid;grid-template-columns:360px 1fr;height:100%;min-height:600px}.sidebar{padding:20px;background:#fff;border-right:1px solid var(--line);overflow:auto;z-index:500}
-h1{font-size:22px;line-height:1.2;margin:0 0 8px;font-weight:750;letter-spacing:-.4px}.intro{font-size:13px;line-height:1.45;color:var(--muted);margin:0 0 15px}
-label,.label{display:block;font-size:13px;font-weight:650;margin:13px 0 6px}input,select,button{font:inherit}
-input[type=text],input[type=number],select{width:100%;height:39px;border:1px solid var(--line);border-radius:9px;padding:0 10px;background:#fff;color:var(--ink);outline:none}
+.app{display:grid;grid-template-columns:380px 1fr;height:100%;min-height:600px}
+.sidebar{padding:18px 18px 24px;background:#fff;border-right:1px solid var(--line);overflow:auto;z-index:500;display:flex;flex-direction:column}
+h1{font-size:21px;line-height:1.2;margin:0 0 6px;font-weight:750;letter-spacing:-.4px}
+.intro{font-size:12.5px;line-height:1.45;color:var(--muted);margin:0 0 14px}
+label,.label{display:block;font-size:12.5px;font-weight:650;margin:0 0 6px;color:var(--ink)}
+input,select,button{font:inherit}
+input[type=text],input[type=number],select{width:100%;height:38px;border:1px solid var(--line);border-radius:9px;padding:0 10px;background:#fff;color:var(--ink);outline:none}
 input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px #1677ff1a}
 .searchrow{display:flex;gap:7px}.searchrow input{min-width:0}.searchrow button{width:42px;flex:0 0 42px}
-button{border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px;cursor:pointer;font-weight:650;color:var(--ink)}button:hover{filter:brightness(.97)}button.primary{background:var(--accent);border-color:var(--accent);color:white}button:disabled{opacity:.55;cursor:wait}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.colors{display:flex;gap:9px;flex-wrap:wrap;padding:3px 0}
-.swatch{width:25px;height:25px;border-radius:50%;padding:0;border:2px solid #fff;box-shadow:0 0 0 1px #ccd5e1;min-width:25px}.swatch.active{box-shadow:0 0 0 2px var(--accent);border:3px solid white}
-.opacityrow{display:flex;align-items:center;gap:10px}.opacityrow input{flex:1;accent-color:var(--accent)}.opacityrow span{width:36px;text-align:right;font-size:12px}
-.sectionhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:18px}.sectionhead .label{margin:0}.sectionhead button{padding:7px 9px;font-size:12px}
-.circlelist{display:grid;gap:6px;margin-top:9px}.circleitem{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:8px;background:#fff}.circleitem.selected{border-color:var(--accent);background:#f2f7ff}.circleitem .mini{width:13px;height:13px;border-radius:50%;flex:0 0 13px}.circleitem .choose{flex:1;text-align:left;border:0;background:transparent;padding:2px 0;font-size:13px;min-width:0}.circleitem .delete{padding:4px 7px;color:#b42318}
-.info{background:#f7f9fc;border:1px solid var(--line);border-radius:11px;padding:11px;margin-top:14px;font-size:12px}.infoitem{display:flex;gap:8px;align-items:flex-start;margin:3px 0 10px}.infoitem:last-child{margin-bottom:1px}.doticon{width:20px;flex:0 0 20px;color:var(--muted);font-size:15px;text-align:center}.info strong{display:block;font-size:12px;margin-bottom:3px}.info small{font-size:12px;color:var(--muted);word-break:break-word}
-.actions{display:grid;gap:7px;margin-top:12px}.actions button{min-height:39px;font-size:13px}.note{font-size:11px;color:#8491a3;line-height:1.4;margin-top:12px}.status{font-size:12px;color:var(--muted);min-height:17px;margin-top:6px}
-#map{height:100%;width:100%;background:#e8eef4}.center-dot{width:16px;height:16px;border:3px solid #fff;border-radius:50%;box-shadow:0 1px 5px #0007}
-.leaflet-control-attribution{font-size:10px!important}.leaflet-control-layers{font-size:13px}
-@media(max-width:760px){.app{grid-template-columns:1fr;grid-template-rows:auto minmax(390px,1fr);height:auto;min-height:100%}.sidebar{border-right:0;border-bottom:1px solid var(--line);overflow:visible;padding:16px}#map{height:58vh;min-height:390px}}
+button{border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px;cursor:pointer;font-weight:650;color:var(--ink)}
+button:hover{filter:brightness(.97)}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.55;cursor:wait}
+.block{margin:0 0 14px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row2 > div{min-width:0}
+.sectionhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:18px 0 8px}
+.sectionhead .label{margin:0}.sectionhead button{padding:7px 9px;font-size:12px}
+.colors{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;padding:2px 0 4px}
+.swatch{width:100%;aspect-ratio:1/1;border-radius:50%;padding:0;border:2px solid #fff;box-shadow:0 0 0 1px #ccd5e1;min-width:0;cursor:pointer}
+.swatch.active{box-shadow:0 0 0 2px var(--accent);border:3px solid #fff}
+.opacityrow{display:flex;align-items:center;gap:10px}
+.opacityrow input[type=range]{flex:1;accent-color:var(--accent);height:38px}
+.opacityrow span{width:42px;text-align:right;font-size:12px;color:var(--muted)}
+.checkline{display:flex;align-items:center;gap:9px;font-weight:500;font-size:13px;margin:0 0 10px;cursor:pointer}
+.checkline input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:0 0 16px}
+.circlelist{display:grid;gap:6px}
+.circleitem{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:9px;padding:6px;background:#fff}
+.circleitem.selected{border-color:var(--accent);background:#f2f7ff}
+.circleitem.hidden .choose{opacity:.5;text-decoration:line-through}
+.circleitem.dragging{opacity:.5}
+.circleitem.drop-before{box-shadow:0 -3px 0 0 var(--accent) inset}
+.circleitem.drop-after{box-shadow:0 3px 0 0 var(--accent) inset}
+.circleitem .handle{color:#b6c0cd;font-size:14px;cursor:grab;padding:0 2px;user-select:none;touch-action:none}
+.circleitem .mini{width:13px;height:13px;border-radius:50%;flex:0 0 13px;display:block}
+.circleitem .choose{flex:1;text-align:left;border:0;background:transparent;padding:2px 0;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
+.circleitem .icon{padding:2px 4px;font-size:13px;line-height:1;min-width:22px;text-align:center;border:0;background:transparent}
+.circleitem .delete{color:#b42318}
+.circleitem .eye{position:relative;padding:2px 4px;font-size:13px;line-height:1;min-width:22px;text-align:center;color:var(--ink);border:0;background:transparent}
+.circleitem .eye.hidden::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:2px;background:#b42318;border-radius:1px;transform:translate(-50%,-50%) rotate(-45deg);pointer-events:none}
+.empty{font-size:12px;color:var(--muted);padding:8px;text-align:center;border:1px dashed var(--line);border-radius:9px}
+.info{background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:12px;display:grid;gap:8px}
+.infoitem{display:flex;gap:8px;align-items:center}
+.infoitem .doticon{width:18px;flex:0 0 18px;color:var(--muted);font-size:15px;text-align:center}
+.infoitem strong{display:block;font-size:12px;margin-bottom:1px}
+.infoitem small{font-size:12px;color:var(--muted);word-break:break-word}
+.infoitem button{margin-left:auto;padding:3px 7px}
+.actions{display:grid;gap:8px;margin-top:4px}
+.actions button{min-height:38px;font-size:13px}
+.actions2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.note{font-size:11px;color:#8491a3;line-height:1.45;margin:10px 0 0}
+.status{font-size:12px;color:var(--muted);min-height:17px;margin-top:6px}
+.history{display:grid;gap:6px;max-height:260px;overflow:auto}
+.histitem{border:1px solid var(--line);border-radius:9px;padding:8px;background:#fff;display:grid;gap:6px}
+.histitem.broken{border-color:#f2c2bd;background:#fff7f6}
+.histitem .htop{display:flex;align-items:center;gap:6px}
+.histitem .hname{flex:1;font-size:13px;font-weight:650;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.histitem .hmeta{font-size:11px;color:var(--muted)}
+.histitem .hbtns{display:flex;gap:5px;flex-wrap:wrap}
+.histitem .hbtns button{padding:4px 7px;font-size:11px}
+#map{height:100%;width:100%;background:#e8eef4}
+.center-dot{width:16px;height:16px;border:3px solid #fff;border-radius:50%;box-shadow:0 1px 5px #0007;display:flex;align-items:center;justify-content:center;color:#fff;font:700 10px/1 system-ui,sans-serif}
+.marker-flag{width:18px;height:18px;position:relative}
+.marker-flag::before{content:"";position:absolute;left:0;top:0;border-left:10px solid transparent;border-right:0 solid transparent;border-bottom:18px solid currentColor}
+.marker-tri{width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:16px solid currentColor;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
+.leaflet-control-attribution{font-size:10px!important}
+.leaflet-control-layers{font-size:13px}
+.intersection-layer{position:absolute;left:0;top:0;pointer-events:none;z-index:450}
+.legend-box{position:absolute;z-index:1000;background:rgba(255,255,255,.94);border:1px solid rgba(0,0,0,.18);border-radius:10px;padding:10px 12px;font:500 13px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#17212f;box-shadow:0 6px 20px rgba(0,0,0,.12);cursor:move;user-select:none;max-width:min(420px,46%);min-width:140px}
+.legend-box.dragging{box-shadow:0 10px 28px rgba(0,0,0,.22)}
+.legend-row{display:flex;align-items:center;gap:8px;padding:2px 0}
+.legend-row.hidden{opacity:.45}
+.legend-dot{width:14px;height:14px;border-radius:50%;flex:0 0 14px;display:block;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.legend-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
+.legend-edit{border:0;background:transparent;padding:0 3px;font-size:12px;color:#65758b;cursor:pointer}
+.legend-edit:hover{color:#1677ff}
+.legend-handle{position:absolute;top:6px;right:6px;font-size:11px;color:#8491a3;pointer-events:none}
+@media(max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto minmax(390px,1fr);height:auto;min-height:100%}
+  .sidebar{border-right:0;border-bottom:1px solid var(--line);overflow:visible;padding:16px}
+  #map{height:58vh;min-height:390px}
+}
 </style>
 </head>
 <body>
 <div class="app"><aside class="sidebar">
 <h1>Карта с кругами и центрами</h1>
-<p class="intro">Добавляйте несколько кругов. У каждого свои центр, радиус и цвет; цвет центральной точки совпадает с цветом круга.</p>
-<label for="place">Адрес или место для выбранного круга</label>
-<div class="searchrow"><input id="place" type="text" placeholder="Введите адрес или название"><button id="find" title="Найти адрес">⌕</button></div>
+<p class="intro">Добавляйте несколько кругов. У каждого свои центр, радиус и цвет. Пересечения кругов можно выделять штриховкой. История карт хранится в браузере.</p>
+
+<div class="block">
+  <label for="place">Адрес или место для выбранного круга</label>
+  <div class="searchrow"><input id="place" type="text" placeholder="Введите адрес или название"><button id="find" title="Найти адрес">⌕</button></div>
+</div>
+
 <div class="sectionhead"><span class="label">Круги на карте</span><button class="primary" id="add">＋ Добавить круг</button></div>
-<div id="circleList" class="circlelist"></div>
-<div class="grid2">
-<div><label for="radius">Радиус</label><input id="radius" type="number" min="1" max="2000000" step="1" value="1000"></div>
-<div><label for="units">Единицы</label><select id="units"><option value="m">метры</option><option value="km">километры</option><option value="mi">мили</option></select></div>
+<div id="circleList" class="circlelist block"></div>
+
+<div class="block">
+  <div class="row2">
+    <div><label for="radius">Радиус</label><input id="radius" type="number" min="1" max="2000000" step="1" value="1000"></div>
+    <div><label for="units">Единицы</label><select id="units"><option value="m">метры</option><option value="km">километры</option><option value="mi">мили</option></select></div>
+  </div>
 </div>
-<label>Цвет выбранного круга и точки</label>
-<div class="colors" id="colors">
-<button class="swatch active" data-color="#1677ff" style="background:#1677ff" title="Синий" aria-label="Синий"></button>
-<button class="swatch" data-color="#e53935" style="background:#e53935" title="Красный" aria-label="Красный"></button>
-<button class="swatch" data-color="#16a34a" style="background:#16a34a" title="Зелёный" aria-label="Зелёный"></button>
-<button class="swatch" data-color="#f59e0b" style="background:#f59e0b" title="Оранжевый" aria-label="Оранжевый"></button>
-<button class="swatch" data-color="#9333ea" style="background:#9333ea" title="Фиолетовый" aria-label="Фиолетовый"></button>
-<button class="swatch" data-color="#06b6d4" style="background:#06b6d4" title="Бирюзовый" aria-label="Бирюзовый"></button>
-<button class="swatch" data-color="#64748b" style="background:#64748b" title="Серый" aria-label="Серый"></button>
+
+<div class="block">
+  <div class="row2">
+    <div><label for="weight">Толщина обводки</label><input id="weight" type="number" min="0" max="20" step="1" value="3"></div>
+    <div><label for="markerType">Метка центра</label><select id="markerType">
+      <option value="dot">Точка</option>
+      <option value="numbered">Круг с номером</option>
+      <option value="flag">Флажок</option>
+      <option value="triangle">Треугольник</option>
+    </select></div>
+  </div>
 </div>
-<label for="opacity">Прозрачность заливки выбранного круга</label>
-<div class="opacityrow"><input id="opacity" type="range" min="5" max="80" value="35"><span id="opacityVal">35%</span></div>
-<div class="grid2">
-<div><label for="lat">Широта центра</label><input id="lat" type="number" step="any" value="51.5336"></div>
-<div><label for="lng">Долгота центра</label><input id="lng" type="number" step="any" value="46.0343"></div>
+
+<div class="block">
+  <label for="opacity">Прозрачность заливки</label>
+  <div class="opacityrow"><input id="opacity" type="range" min="0" max="100" value="35"><span id="opacityVal">35%</span></div>
 </div>
-<div class="info">
-<div class="infoitem"><div class="doticon">●</div><div><strong>Центр выбранного круга</strong><small id="coords">51.533600, 46.034300</small></div><button id="copyCoords" title="Скопировать координаты" style="padding:3px 7px;margin-left:auto">⧉</button></div>
-<div class="infoitem"><div class="doticon">◎</div><div><strong>Радиус</strong><small id="radiusText">1 000 м (1 км)</small></div></div>
+
+<div class="block">
+  <label>Цвет выбранного круга и точки</label>
+  <div class="colors" id="colors">
+    <button class="swatch active" data-color="#1677ff" style="background:#1677ff" title="Синий"></button>
+    <button class="swatch" data-color="#e53935" style="background:#e53935" title="Красный"></button>
+    <button class="swatch" data-color="#16a34a" style="background:#16a34a" title="Зелёный"></button>
+    <button class="swatch" data-color="#f59e0b" style="background:#f59e0b" title="Оранжевый"></button>
+    <button class="swatch" data-color="#9333ea" style="background:#9333ea" title="Фиолетовый"></button>
+    <button class="swatch" data-color="#06b6d4" style="background:#06b6d4" title="Бирюзовый"></button>
+    <button class="swatch" data-color="#64748b" style="background:#64748b" title="Серый"></button>
+    <button class="swatch" data-color="#ec4899" style="background:#ec4899" title="Розовый"></button>
+    <button class="swatch" data-color="#84cc16" style="background:#84cc16" title="Лаймовый"></button>
+    <button class="swatch" data-color="#92400e" style="background:#92400e" title="Коричневый"></button>
+    <button class="swatch" data-color="#0f766e" style="background:#0f766e" title="Тёмно-бирюзовый"></button>
+    <button class="swatch" data-color="#7c3aed" style="background:#7c3aed" title="Индиго"></button>
+  </div>
 </div>
-<div class="actions"><button class="primary" id="share">↗ Скопировать ссылку со всеми кругами</button><button id="download">↓ Сохранить карту как изображение</button><button id="reset">Вернуть исходный вид</button></div>
+
+<div class="block">
+  <div class="row2">
+    <div><label for="lat">Широта центра</label><input id="lat" type="number" step="any" value="51.5336"></div>
+    <div><label for="lng">Долгота центра</label><input id="lng" type="number" step="any" value="46.0343"></div>
+  </div>
+</div>
+
+<div class="block info">
+  <div class="infoitem"><div class="doticon">●</div><div><strong>Центр выбранного круга</strong><small id="coords">51.533600, 46.034300</small></div><button id="copyCoords" title="Скопировать координаты">⧉</button></div>
+  <div class="infoitem"><div class="doticon">◎</div><div><strong>Радиус</strong><small id="radiusText">1 000 м (1 км)</small></div></div>
+</div>
+
+<div class="sectionhead"><span class="label">Штриховка пересечений</span></div>
+<div class="block">
+  <label class="checkline"><input id="hatchToggle" type="checkbox" checked> Показывать штриховку пересечений</label>
+  <div class="row2">
+    <div><label for="hatchStyle">Паттерн</label><select id="hatchStyle">
+      <option value="auto">Авто (по числу кругов)</option>
+      <option value="diag1">Диагональ /</option>
+      <option value="diag2">Диагональ \</option>
+      <option value="cross">Крест</option>
+      <option value="dots">Точки</option>
+      <option value="vertical">Вертикаль</option>
+      <option value="horizontal">Горизонталь</option>
+    </select></div>
+    <div><label for="hatchOpacity">Прозрачность</label><div class="opacityrow"><input id="hatchOpacity" type="range" min="0" max="100" value="70"><span id="hatchOpacityVal">70%</span></div></div>
+  </div>
+</div>
+
+<div class="sectionhead"><span class="label">Отображение</span></div>
+<div class="block">
+  <label class="checkline"><input id="legendToggle" type="checkbox" checked> Показывать легенду на карте</label>
+  <label class="checkline" style="margin-bottom:0"><input id="askExport" type="checkbox"> Спрашивать параметры экспорта</label>
+</div>
+
+<div class="actions">
+  <button class="primary" id="share">↗ Скопировать ссылку со всеми кругами</button>
+  <button id="download">↓ Сохранить карту как изображение</button>
+  <button id="reset">Вернуть исходный вид</button>
+</div>
 <div class="status" id="status" role="status"></div>
-<p class="note">Перетащите точку, щёлкните по карте или введите координаты. Переключение «Карта / Спутник / Гибрид» находится в правом верхнем углу карты. Используется Leaflet и открытые картографические слои; для поиска адресов нужен интернет.</p>
+
+<div class="sectionhead"><span class="label">История карт</span><button class="primary" id="saveHistory">💾 Сохранить</button></div>
+<div id="history" class="history"></div>
+<div class="actions2"><button id="exportHistory">⬇ Экспорт JSON</button><button id="importHistory">⬆ Импорт JSON</button></div>
+<input id="importFile" type="file" accept="application/json" style="display:none">
+
+<p class="note">Перетащите точку, щёлкните по карте или введите координаты. Порядок наложения меняется перетаскиванием строк за ручку ≡ (верхняя — сверху), название и цвет при этом не меняются. Легенду можно перетащить мышью. Описание круга — двойной клик по строке легенды. В списке и легенде показан диаметр, в поле ввода — радиус.</p>
 </aside><main id="map" aria-label="Карта"></main></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
 (() => {
+ // ---------- переменные состояния ----------
  const $=id=>document.getElementById(id), defaultCenter=[51.5336,46.0343];
- const palette=['#1677ff','#e53935','#16a34a','#f59e0b','#9333ea','#06b6d4','#64748b'];
- let circles=[],selectedId=null,nextId=1;
- const map=L.map('map',{preferCanvas:true}).setView(defaultCenter,13);
+ const palette=['#1677ff','#e53935','#16a34a','#f59e0b','#9333ea','#06b6d4','#64748b','#ec4899','#84cc16','#92400e','#0f766e','#7c3aed'];
+ let circles=[],selectedId=null,nextId=1,nextNum=1;
+ let legendState = { x: 0.72, y: 0.72, show: true };
+ let askExport = false;
+ let hatchStyle = 'auto';
+ let hatchEnabled = true;
+ let hatchOpacity = 70;
+ const HISTORY_KEY='circle-maps-history-v3', DRAFT_KEY='circle-maps-draft-v3', HISTORY_LIMIT=50;
+
+ const enc = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+ const dec = s => new TextDecoder().decode(Uint8Array.from(atob(s), c=>c.charCodeAt(0)));
+
+ // ---------- карта ----------
+ const map=L.map('map',{preferCanvas:true,zoomSnap:0.1,zoomDelta:0.25,wheelPxPerZoomLevel:200,wheelDebounceTime:20,zoomAnimation:true}).setView(defaultCenter,13);
  const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'});
  const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri'});
  const labels=L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Labels &copy; Esri'});
  const hybrid=L.layerGroup([satellite,labels]);
  const baseLayers={'Карта':street,'Спутник':satellite,'Гибрид':hybrid};
- street.addTo(map);L.control.layers(baseLayers,null,{collapsed:false,position:'topright'}).addTo(map);
- const status=msg=>$('status').textContent=msg;
+ street.addTo(map);
+ L.control.layers(baseLayers,null,{collapsed:false,position:'topright'}).addTo(map);
+ L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(map);
+
+ const status=msg=>{ try{ $('status').textContent=msg; }catch(e){} };
  const num=v=>Number(v).toLocaleString('ru-RU',{maximumFractionDigits:3});
  const getSelected=()=>circles.find(c=>c.id===selectedId);
  function radiusMeters(c=getSelected()){if(!c)return 1000;return Math.max(1,Number(c.radius)||1)*({m:1,km:1000,mi:1609.344}[c.unit]||1)}
  function radiusLabel(c){const m=radiusMeters(c);return `${num(m)} м (${(m/1000).toLocaleString('ru-RU',{maximumFractionDigits:3})} км)`}
- function markerIcon(color){return L.divIcon({className:'',html:`<div class="center-dot" style="background:${color}"></div>`,iconSize:[16,16],iconAnchor:[8,8]})}
- function makeCircle(lat,lng,opts={}) {
-   const id=nextId++, c={id,lat,lng,radius:opts.radius||1000,unit:opts.unit||'m',color:opts.color||palette[(id-1)%palette.length],opacity:opts.opacity??35,marker:null,shape:null};
-   c.shape=L.circle([lat,lng],{radius:radiusMeters(c),color:c.color,weight:3,fillColor:c.color,fillOpacity:c.opacity/100}).addTo(map);
-   c.marker=L.marker([lat,lng],{icon:markerIcon(c.color),draggable:true,title:'Центр круга '+id}).addTo(map);
-   c.marker.on('drag',e=>{c.lat=e.target.getLatLng().lat;c.lng=e.target.getLatLng().lng;c.shape.setLatLng([c.lat,c.lng]);if(c.id===selectedId)syncInputs();});
-   c.marker.on('dragend',()=>{if(c.id===selectedId)syncInputs();updateUrl();renderList();});
-   c.shape.on('click',()=>selectCircle(c.id));
-   circles.push(c);return c;
+ function diameterMetersLabel(c){const m=Math.round(radiusMeters(c)*2);return `${num(m)} м`}
+ function circleTitle(c){return (c.name && c.name.trim()) ? c.name.trim() : `Круг ${c.num} · ${diameterMetersLabel(c)}`}
+
+ function markerIcon(c){
+   const color=c.color, type=c.markerType||'dot';
+   if(type==='numbered'){
+     return L.divIcon({className:'',html:`<div class="center-dot" style="background:${color};width:20px;height:20px;border-width:2px">${c.num}</div>`,iconSize:[20,20],iconAnchor:[10,10]});
+   }
+   if(type==='flag'){
+     return L.divIcon({className:'',html:`<div class="marker-flag" style="color:${color}"></div>`,iconSize:[18,18],iconAnchor:[9,18]});
+   }
+   if(type==='triangle'){
+     return L.divIcon({className:'',html:`<div class="marker-tri" style="border-bottom-color:${color}"></div>`,iconSize:[18,16],iconAnchor:[9,16]});
+   }
+   return L.divIcon({className:'',html:`<div class="center-dot" style="background:${color}"></div>`,iconSize:[16,16],iconAnchor:[8,8]});
  }
- function updateShape(c){c.shape.setLatLng([c.lat,c.lng]);c.shape.setRadius(radiusMeters(c));c.shape.setStyle({color:c.color,fillColor:c.color,fillOpacity:c.opacity/100});c.marker.setLatLng([c.lat,c.lng]);c.marker.setIcon(markerIcon(c.color));}
+
+ // ---------- штриховки ----------
+ const hatchLayer = document.createElement('canvas');
+ hatchLayer.className='intersection-layer';
+ map.getContainer().appendChild(hatchLayer);
+
+ function makeHatchPattern(ctx, style, color){
+   const size=10, c=document.createElement('canvas'); c.width=size; c.height=size;
+   const x=c.getContext('2d');
+   x.strokeStyle=color; x.fillStyle=color; x.lineWidth=2;
+   if(style==='diag1'){ x.beginPath(); x.moveTo(-2,size+2); x.lineTo(size+2,-2); x.stroke(); }
+   else if(style==='diag2'){ x.beginPath(); x.moveTo(-2,-2); x.lineTo(size+2,size+2); x.stroke(); }
+   else if(style==='cross'){ x.beginPath(); x.moveTo(-2,size+2); x.lineTo(size+2,-2); x.moveTo(-2,-2); x.lineTo(size+2,size+2); x.stroke(); }
+   else if(style==='dots'){ x.beginPath(); x.arc(size/2,size/2,1.8,0,Math.PI*2); x.fill(); }
+   else if(style==='vertical'){ x.beginPath(); x.moveTo(size/2,0); x.lineTo(size/2,size); x.stroke(); }
+   else if(style==='horizontal'){ x.beginPath(); x.moveTo(0,size/2); x.lineTo(size,size/2); x.stroke(); }
+   return ctx.createPattern(c,'repeat');
+ }
+
+ const HATCH_STYLES=['diag1','diag2','cross','dots','vertical','horizontal'];
+ const HATCH_COLORS=['rgba(0,0,0,0.85)','rgba(180,35,24,0.9)','rgba(22,119,255,0.9)','rgba(22,163,74,0.9)','rgba(147,51,234,0.9)','rgba(245,158,11,0.95)'];
+
+ function combinations(n,k){
+   const res=[], comb=[];
+   (function go(start){
+     if(comb.length===k){ res.push(comb.slice()); return; }
+     for(let i=start;i<n;i++){ comb.push(i); go(i+1); comb.pop(); }
+   })(0);
+   return res;
+ }
+
+ function renderHatches(){
+   const size=map.getSize();
+   if(hatchLayer.width!==size.x || hatchLayer.height!==size.y){
+     hatchLayer.width=size.x; hatchLayer.height=size.y;
+   }
+   const ctx=hatchLayer.getContext('2d');
+   ctx.clearRect(0,0,size.x,size.y);
+   if(!hatchEnabled) return;
+   const visible=circles.filter(c=>c.visible!==false);
+   if(visible.length<2) return;
+
+   const items=visible.map(c=>{
+     const pt=map.latLngToContainerPoint([c.lat,c.lng]);
+     const edge=map.latLngToContainerPoint([c.lat, c.lng + (radiusMeters(c)/111320)/Math.cos(c.lat*Math.PI/180)]);
+     const r=Math.abs(edge.x - pt.x) || Math.abs(map.latLngToContainerPoint([c.lat + radiusMeters(c)/111320, c.lng]).y - pt.y);
+     return {x:pt.x,y:pt.y,r:Math.max(1,r)};
+   });
+
+   const maxN=Math.min(visible.length,5);
+   const globalAlpha = Math.max(0, Math.min(1, hatchOpacity/100));
+
+   for(let n=2;n<=maxN;n++){
+     const combos=combinations(visible.length,n);
+     for(const combo of combos){
+       const mask=document.createElement('canvas'); mask.width=size.x; mask.height=size.y;
+       const mx=mask.getContext('2d');
+       let first=true;
+       for(const idx of combo){
+         const it=items[idx];
+         mx.globalCompositeOperation = first ? 'source-over' : 'destination-in';
+         mx.beginPath(); mx.arc(it.x,it.y,it.r,0,Math.PI*2); mx.fillStyle='#000'; mx.fill();
+         first=false;
+       }
+       const style = hatchStyle==='auto' ? HATCH_STYLES[(n-2)%HATCH_STYLES.length] : hatchStyle;
+       const color = hatchStyle==='auto' ? HATCH_COLORS[(n-2)%HATCH_COLORS.length] : 'rgba(0,0,0,0.9)';
+       const pattern = makeHatchPattern(ctx, style, color);
+
+       const img=document.createElement('canvas'); img.width=size.x; img.height=size.y;
+       const ix=img.getContext('2d');
+       ix.fillStyle=pattern; ix.fillRect(0,0,size.x,size.y);
+       ix.globalCompositeOperation='destination-in';
+       ix.drawImage(mask,0,0);
+
+       ctx.save();
+       ctx.globalAlpha=globalAlpha;
+       ctx.drawImage(img,0,0);
+       ctx.restore();
+     }
+   }
+ }
+
+ // ---------- легенда ----------
+ const legendEl = L.DomUtil.create('div', 'legend-box', map.getContainer());
+ legendEl.style.display = 'none';
+ L.DomEvent.disableClickPropagation(legendEl);
+ L.DomEvent.disableScrollPropagation(legendEl);
+
+ (function makeDraggable(el){
+   let startX=0,startY=0,origL=0,origT=0,dragging=false;
+   function onDown(e){
+     if(e.button!==undefined && e.button!==0) return;
+     if(e.target.closest('.legend-edit')) return;
+     const p = e.touches ? e.touches[0] : e;
+     startX=p.clientX; startY=p.clientY;
+     const r=el.getBoundingClientRect(), pr=el.parentElement.getBoundingClientRect();
+     origL=r.left-pr.left; origT=r.top-pr.top;
+     dragging=true; el.classList.add('dragging');
+     if(el.setPointerCapture && e.pointerId!==undefined) el.setPointerCapture(e.pointerId);
+     e.preventDefault();
+   }
+   function onMove(e){
+     if(!dragging) return;
+     const p = e.touches ? e.touches[0] : e;
+     const pr=el.parentElement.getBoundingClientRect();
+     let L=origL+(p.clientX-startX), T=origT+(p.clientY-startY);
+     const maxL=pr.width-el.offsetWidth, maxT=pr.height-el.offsetHeight;
+     L=Math.max(0,Math.min(maxL,L)); T=Math.max(0,Math.min(maxT,T));
+     el.style.left=L+'px'; el.style.top=T+'px'; el.style.right='auto'; el.style.bottom='auto';
+     saveLegendPos(L,T);
+   }
+   function onUp(){ dragging=false; el.classList.remove('dragging'); }
+   el.addEventListener('pointerdown',onDown);
+   el.addEventListener('pointermove',onMove);
+   el.addEventListener('pointerup',onUp);
+   el.addEventListener('pointercancel',onUp);
+ })(legendEl);
+
+ function saveLegendPos(left,top){
+   const pr=legendEl.parentElement.getBoundingClientRect();
+   legendState.x = pr.width  ? left/pr.width  : 0;
+   legendState.y = pr.height ? top /pr.height : 0;
+   scheduleDraft(); updateUrl();
+ }
+ function applyLegendPos(){
+   const pr=legendEl.parentElement.getBoundingClientRect();
+   if(!pr.width||!pr.height) return;
+   const L = Math.round((legendState.x||0)*pr.width);
+   const T = Math.round((legendState.y||0)*pr.height);
+   legendEl.style.left=L+'px'; legendEl.style.top=T+'px';
+   legendEl.style.right='auto'; legendEl.style.bottom='auto';
+ }
+ function renderLegend(){
+   if(!legendState.show || !circles.length){ legendEl.style.display='none'; return; }
+   legendEl.style.display='';
+   legendEl.innerHTML='';
+   const handle=document.createElement('div'); handle.className='legend-handle'; handle.textContent='✥';
+   legendEl.append(handle);
+   circles.forEach((c)=>{
+     const row=document.createElement('div');
+     row.className='legend-row'+(c.visible?'':' hidden');
+     const dot=document.createElement('span'); dot.className='legend-dot'; dot.style.background=c.color;
+     const txt=document.createElement('span'); txt.className='legend-text';
+     txt.textContent = (c.desc && c.desc.trim()) ? c.desc : circleTitle(c);
+     txt.title = txt.textContent + ' (двойной клик — изменить описание)';
+     txt.ondblclick = (ev)=>{ ev.stopPropagation(); editDesc(c); };
+     const btn=document.createElement('button'); btn.className='legend-edit'; btn.textContent='✎'; btn.title='Изменить описание';
+     btn.onclick=(ev)=>{ ev.stopPropagation(); editDesc(c); };
+     row.append(dot,txt,btn);
+     legendEl.append(row);
+   });
+   applyLegendPos();
+ }
+ function editDesc(c){
+   const cur = (c.desc||'').trim();
+   const v = prompt('Описание для круга (пусто — использовать размер):', cur);
+   if(v===null) return;
+   c.desc = v.trim();
+   renderLegend(); renderList(); updateUrl(); scheduleDraft();
+ }
+
+ // ---------- круги ----------
+ function makeCircle(lat,lng,opts={}) {
+   const id=nextId++;
+   let num;
+   if(Number.isFinite(opts.num) && opts.num > 0){
+     num = opts.num;
+     if(num >= nextNum) nextNum = num + 1;
+   } else {
+     num = nextNum++;
+   }
+   const c={
+     id,num,lat,lng,
+     radius:opts.radius||1000,
+     unit:opts.unit||'m',
+     color:opts.color||palette[(num-1)%palette.length],
+     opacity:opts.opacity??35,
+     weight:opts.weight??3,
+     visible:opts.visible!==false,
+     desc:opts.desc||'',
+     name:opts.name||'',
+     markerType:opts.markerType||'dot',
+     marker:null,shape:null
+   };
+   c.shape=L.circle([lat,lng],{radius:radiusMeters(c),color:c.color,weight:c.weight,fillColor:c.color,fillOpacity:c.opacity/100}).addTo(map);
+   c.shape.on('click',()=>selectCircle(c.id));
+   c.marker=L.marker([lat,lng],{icon:markerIcon(c),draggable:true,title:'Центр круга '+c.num}).addTo(map);
+   c.marker.on('drag',e=>{c.lat=e.target.getLatLng().lat;c.lng=e.target.getLatLng().lng;c.shape.setLatLng([c.lat,c.lng]);if(c.id===selectedId)syncInputs();renderHatches();});
+   c.marker.on('dragend',()=>{if(c.id===selectedId)syncInputs();updateUrl();renderList();scheduleDraft();});
+   circles.push(c);
+   applyVisibility(c);
+   renderHatches();
+   return c;
+ }
+ function applyVisibility(c){
+   const show=c.visible!==false;
+   if(show){
+     if(!map.hasLayer(c.shape)) c.shape.addTo(map);
+     if(!map.hasLayer(c.marker)) c.marker.addTo(map);
+   }else{
+     if(map.hasLayer(c.shape)) map.removeLayer(c.shape);
+     if(map.hasLayer(c.marker)) map.removeLayer(c.marker);
+   }
+ }
+ function updateShape(c){
+   c.shape.setLatLng([c.lat,c.lng]);
+   c.shape.setRadius(radiusMeters(c));
+   c.shape.setStyle({color:c.color,weight:c.weight,fillColor:c.color,fillOpacity:c.opacity/100});
+   c.marker.setLatLng([c.lat,c.lng]);
+   c.marker.setIcon(markerIcon(c));
+   applyVisibility(c);
+   renderHatches();
+ }
  function syncInputs(){
    const c=getSelected();if(!c)return;
    $('radius').value=c.radius;$('units').value=c.unit;$('opacity').value=c.opacity;$('opacityVal').textContent=c.opacity+'%';
+   $('weight').value=c.weight;
+   $('markerType').value=c.markerType;
    $('lat').value=c.lat.toFixed(6);$('lng').value=c.lng.toFixed(6);$('coords').textContent=`${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`;
    $('radiusText').textContent=radiusLabel(c);
    document.querySelectorAll('.swatch').forEach(b=>b.classList.toggle('active',b.dataset.color===c.color));
  }
+
+ // ---------- drag&drop списка ----------
+ let dragState=null;
  function renderList(){
    const box=$('circleList');box.innerHTML='';
    circles.forEach((c,i)=>{
-     const row=document.createElement('div');row.className='circleitem'+(c.id===selectedId?' selected':'');
+     const row=document.createElement('div');
+     row.className='circleitem'+(c.id===selectedId?' selected':'')+(c.visible?'':' hidden');
+     row.dataset.idx=i;
+
+     const handle=document.createElement('span');handle.className='handle';handle.textContent='≡';handle.title='Перетащите, чтобы изменить порядок';
      const dot=document.createElement('span');dot.className='mini';dot.style.background=c.color;
-     const choose=document.createElement('button');choose.className='choose';choose.textContent=`Круг ${i+1} · ${radiusLabel(c)}`;choose.title='Выбрать этот круг';choose.onclick=()=>selectCircle(c.id,true);
-     const del=document.createElement('button');del.className='delete';del.textContent='×';del.title='Удалить круг';del.setAttribute('aria-label','Удалить круг '+(i+1));del.onclick=()=>removeCircle(c.id);
-     row.append(dot,choose,del);box.append(row);
+     const choose=document.createElement('button');choose.className='choose';choose.textContent=circleTitle(c);choose.title='Выбрать этот круг (двойной клик — переименовать)';
+     choose.onclick=()=>selectCircle(c.id,true);
+     choose.ondblclick=(ev)=>{ev.stopPropagation(); renameCircle(c);};
+     const eye=document.createElement('button');
+     eye.className='eye'+(c.visible?'':' hidden');
+     eye.textContent='👁';
+     eye.title=c.visible?'Скрыть круг':'Показать круг';
+     eye.onclick=()=>{c.visible=!c.visible;applyVisibility(c);renderList();updateUrl();scheduleDraft();renderHatches();};
+     const del=document.createElement('button');del.className='delete icon';del.textContent='×';del.title='Удалить круг';del.onclick=()=>removeCircle(c.id);
+     row.append(handle,dot,choose,eye,del);
+
+     handle.addEventListener('pointerdown',(ev)=>{
+       ev.preventDefault();
+       dragState={id:c.id, fromIdx:i, startY:ev.clientY, targetIdx:null};
+       row.classList.add('dragging');
+       handle.setPointerCapture(ev.pointerId);
+     });
+     handle.addEventListener('pointermove',(ev)=>{
+       if(!dragState||dragState.id!==c.id) return;
+       const items=[...box.querySelectorAll('.circleitem')];
+       items.forEach(el=>el.classList.remove('drop-before','drop-after'));
+       const y=ev.clientY;
+       let target=null;
+       for(const el of items){
+         const r=el.getBoundingClientRect();
+         if(y>=r.top && y<=r.bottom){ target={el, idx:Number(el.dataset.idx), before: y < r.top + r.height/2}; break; }
+       }
+       if(target){
+         target.el.classList.add(target.before?'drop-before':'drop-after');
+         let to = target.idx;
+         if(target.before && target.idx > dragState.fromIdx) to = target.idx - 1;
+         if(!target.before && target.idx >= dragState.fromIdx) to = target.idx;
+         if(target.before && target.idx <= dragState.fromIdx) to = target.idx;
+         if(!target.before && target.idx < dragState.fromIdx) to = target.idx + 1;
+         dragState.targetIdx = Math.max(0, Math.min(circles.length-1, to));
+       }
+     });
+     handle.addEventListener('pointerup',()=>{
+       if(!dragState||dragState.id!==c.id) return;
+       items_cleanup(box);
+       const from=dragState.fromIdx;
+       const to=dragState.targetIdx;
+       dragState=null;
+       row.classList.remove('dragging');
+       if(to===null || to===undefined || to===from) return;
+       const [item]=circles.splice(from,1);
+       circles.splice(to,0,item);
+       circles.forEach(x=>{ if(map.hasLayer(x.shape)) map.removeLayer(x.shape); });
+       circles.forEach(x=>{ if(x.visible!==false) x.shape.addTo(map); });
+       renderList(); renderLegend(); updateUrl(); scheduleDraft(); renderHatches();
+     });
+     handle.addEventListener('pointercancel',()=>{ items_cleanup(box); dragState=null; row.classList.remove('dragging'); });
+
+     box.append(row);
    });
+   if(!circles.length){const e=document.createElement('div');e.className='empty';e.textContent='Кругов нет';box.append(e);}
+   renderLegend();
  }
- function selectCircle(id,pan=false){selectedId=id;const c=getSelected();if(!c)return;syncInputs();renderList();if(pan)map.panTo([c.lat,c.lng]);}
- function removeCircle(id){const c=circles.find(x=>x.id===id);if(!c)return;map.removeLayer(c.marker);map.removeLayer(c.shape);circles=circles.filter(x=>x.id!==id);if(!circles.length){const center=map.getCenter();const n=makeCircle(center.lat,center.lng);selectedId=n.id;}else if(selectedId===id)selectedId=circles[circles.length-1].id;selectCircle(selectedId);updateUrl();}
+ function items_cleanup(box){ [...box.querySelectorAll('.circleitem')].forEach(el=>el.classList.remove('drop-before','drop-after')); }
+
+ function renameCircle(c){
+   const def=(c.name&&c.name.trim())?c.name.trim():'';
+   const v=prompt('Название круга:', def);
+   if(v===null) return;
+   c.name=v.trim();
+   renderList(); renderLegend(); updateUrl(); scheduleDraft();
+ }
+ function selectCircle(id,pan=false){
+   selectedId=id;const c=getSelected();if(!c)return;
+   syncInputs();renderList();
+   if(pan)map.panTo([c.lat,c.lng]);
+ }
+ function removeCircle(id){
+   const c=circles.find(x=>x.id===id);if(!c)return;
+   map.removeLayer(c.marker);map.removeLayer(c.shape);
+   circles=circles.filter(x=>x.id!==id);
+   if(!circles.length){const center=map.getCenter();const n=makeCircle(center.lat,center.lng);selectedId=n.id;}
+   else if(selectedId===id)selectedId=circles[circles.length-1].id;
+   selectCircle(selectedId);updateUrl();scheduleDraft();renderHatches();
+ }
  function updateSelected(){
    const c=getSelected();if(!c)return;
-   c.radius=Math.max(1,Number($('radius').value)||1);c.unit=$('units').value;c.opacity=Number($('opacity').value);
-   updateShape(c);syncInputs();renderList();updateUrl();
+   c.radius=Math.max(1,Number($('radius').value)||1);
+   c.unit=$('units').value;
+   c.opacity=Number($('opacity').value);
+   c.weight=Math.max(0,Number($('weight').value)||0);
+   c.markerType=$('markerType').value;
+   updateShape(c);syncInputs();renderList();updateUrl();scheduleDraft();
  }
  function applyCoordinates(){
-   const c=getSelected(),lat=Number($('lat').value),lng=Number($('lng').value);
-   if(Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180){c.lat=lat;c.lng=lng;updateShape(c);syncInputs();map.panTo([lat,lng]);updateUrl();status('');}
-   else status('Проверьте координаты: широта от −90 до 90, долгота от −180 до 180.');
+   const c=getSelected();if(!c)return;
+   const lat=Number($('lat').value),lng=Number($('lng').value);
+   if(Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180){
+     c.lat=lat;c.lng=lng;updateShape(c);syncInputs();map.panTo([lat,lng]);updateUrl();scheduleDraft();status('');
+   } else status('Проверьте координаты: широта от −90 до 90, долгота от −180 до 180.');
  }
- $('radius').addEventListener('input',updateSelected);$('units').addEventListener('change',updateSelected);$('opacity').addEventListener('input',updateSelected);
- $('lat').addEventListener('change',applyCoordinates);$('lng').addEventListener('change',applyCoordinates);
- $('colors').addEventListener('click',e=>{const b=e.target.closest('[data-color]');if(!b)return;const c=getSelected();c.color=b.dataset.color;updateShape(c);syncInputs();renderList();updateUrl();});
- map.on('click',e=>{const c=getSelected();c.lat=e.latlng.lat;c.lng=e.latlng.lng;updateShape(c);syncInputs();renderList();updateUrl();});
+ $('radius').addEventListener('input',updateSelected);
+ $('units').addEventListener('change',updateSelected);
+ $('opacity').addEventListener('input',updateSelected);
+ $('weight').addEventListener('input',updateSelected);
+ $('markerType').addEventListener('change',updateSelected);
+ $('lat').addEventListener('change',applyCoordinates);
+ $('lng').addEventListener('change',applyCoordinates);
+ $('colors').addEventListener('click',e=>{
+   const b=e.target.closest('[data-color]');if(!b)return;
+   const c=getSelected();if(!c)return;
+   c.color=b.dataset.color;updateShape(c);syncInputs();renderList();updateUrl();scheduleDraft();
+ });
+ map.on('click',e=>{
+   const c=getSelected();if(!c)return;
+   c.lat=e.latlng.lat;c.lng=e.latlng.lng;updateShape(c);syncInputs();renderList();updateUrl();scheduleDraft();
+ });
  $('add').addEventListener('click',()=>{
-   const center=map.getCenter(),c=makeCircle(center.lat,center.lng,{radius:1000,unit:'m',color:palette[circles.length%palette.length],opacity:35});
-   selectedId=c.id;map.panTo(center);syncInputs();renderList();updateUrl();status('Добавлен новый круг. Перетащите его точку или задайте адрес/координаты.');
+   const center=map.getCenter();
+   const c=makeCircle(center.lat,center.lng,{radius:1000,unit:'m',color:palette[(nextNum-1)%palette.length],opacity:35,weight:3});
+   selectedId=c.id;map.panTo(center);syncInputs();renderList();updateUrl();scheduleDraft();
+   status('Добавлен новый круг. Перетащите его точку или задайте адрес/координаты.');
  });
  async function geocode(){
    const q=$('place').value.trim();if(!q){status('Введите адрес или название места.');return;}
+   const c=getSelected();if(!c){status('Сначала добавьте круг.');return;}
    $('find').disabled=true;status('Ищу адрес…');
-   try{const res=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q='+encodeURIComponent(q),{headers:{'Accept-Language':'ru'}});
-     if(!res.ok)throw Error();const data=await res.json();if(!data.length){status('Адрес не найден. Уточните запрос или введите координаты.');return;}
-     const c=getSelected();c.lat=Number(data[0].lat);c.lng=Number(data[0].lon);updateShape(c);map.setView([c.lat,c.lng],15);syncInputs();renderList();updateUrl();status(data[0].display_name||'Адрес найден');
-   }catch(e){status('Не удалось найти адрес. Проверьте интернет или введите координаты вручную.');}finally{$('find').disabled=false;}
+   try{
+     const res=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q='+encodeURIComponent(q),{headers:{'Accept-Language':'ru'}});
+     if(!res.ok)throw Error();
+     const data=await res.json();
+     if(!data.length){status('Адрес не найден. Уточните запрос или введите координаты.');return;}
+     c.lat=Number(data[0].lat);c.lng=Number(data[0].lon);
+     updateShape(c);map.setView([c.lat,c.lng],15);syncInputs();renderList();updateUrl();scheduleDraft();
+     status(data[0].display_name||'Адрес найден');
+   }catch(e){status('Не удалось найти адрес. Проверьте интернет или введите координаты вручную.');}
+   finally{$('find').disabled=false;}
  }
- $('find').addEventListener('click',geocode);$('place').addEventListener('keydown',e=>{if(e.key==='Enter')geocode();});
- $('copyCoords').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('coords').textContent);status('Координаты скопированы.')}catch(e){status('Координаты: '+$('coords').textContent)}});
- function state(){return {v:2,base:Object.keys(baseLayers).find(k=>map.hasLayer(baseLayers[k]))||'Карта',zoom:map.getZoom(),circles:circles.map(c=>({lat:c.lat,lng:c.lng,radius:c.radius,unit:c.unit,color:c.color,opacity:c.opacity})),selected:Math.max(0,circles.findIndex(c=>c.id===selectedId))};}
- function updateUrl(){try{const u=new URL(location.href);u.searchParams.set('data',btoa(unescape(encodeURIComponent(JSON.stringify(state())))));history.replaceState(null,'',u.toString());}catch(e){}}
- $('share').addEventListener('click',async()=>{const u=new URL(location.href);u.searchParams.set('data',btoa(unescape(encodeURIComponent(JSON.stringify(state())))));const link=u.toString();try{await navigator.clipboard.writeText(link);status('Ссылка со всеми кругами и типом карты скопирована.')}catch(e){prompt('Скопируйте ссылку:',link)}});
- $('download').addEventListener('click',async()=>{if(typeof html2canvas!=='function'){window.print();return;}status('Готовлю изображение карты…');try{const canvas=await html2canvas($('map'),{useCORS:true,logging:false,scale:2});const a=document.createElement('a');a.download='karta-s-krugami.png';a.href=canvas.toDataURL('image/png');a.click();status('Изображение подготовлено. Некоторые картографические слои могут не экспортироваться из-за ограничений источника.')}catch(e){status('Экспорт ограничен источником картографических тайлов. Попробуйте печать браузера.')}});
- $('reset').addEventListener('click',()=>{circles.forEach(c=>{map.removeLayer(c.marker);map.removeLayer(c.shape)});circles=[];nextId=1;const c=makeCircle(...defaultCenter);selectedId=c.id;street.addTo(map);map.setView(defaultCenter,13);syncInputs();renderList();updateUrl();status('')});
+ $('find').addEventListener('click',geocode);
+ $('place').addEventListener('keydown',e=>{if(e.key==='Enter')geocode();});
+ $('copyCoords').addEventListener('click',async()=>{
+   try{await navigator.clipboard.writeText($('coords').textContent);status('Координаты скопированы.')}
+   catch(e){status('Координаты: '+$('coords').textContent)}
+ });
+
+ // ---------- состояние ----------
+ function state(){
+   return {
+     v:6,
+     base:Object.keys(baseLayers).find(k=>map.hasLayer(baseLayers[k]))||'Карта',
+     zoom:map.getZoom(),
+     center:[map.getCenter().lat,map.getCenter().lng],
+     circles:circles.map(c=>({num:c.num,lat:c.lat,lng:c.lng,radius:c.radius,unit:c.unit,color:c.color,opacity:c.opacity,weight:c.weight,visible:c.visible,desc:c.desc,name:c.name,markerType:c.markerType})),
+     selected:Math.max(0,circles.findIndex(c=>c.id===selectedId)),
+     legend:{x:legendState.x,y:legendState.y,show:legendState.show},
+     askExport, hatchStyle, hatchEnabled, hatchOpacity
+   };
+ }
+ function updateUrl(){
+   try{
+     const u=new URL(location.href);
+     u.searchParams.set('data',enc(JSON.stringify(state())));
+     history.replaceState(null,'',u.toString());
+   }catch(e){ console.warn('updateUrl failed', e); }
+ }
+ $('share').addEventListener('click',async()=>{
+   try{
+     const u=new URL(location.href);
+     u.searchParams.set('data',enc(JSON.stringify(state())));
+     const link=u.toString();
+     try{await navigator.clipboard.writeText(link);status('Ссылка со всеми кругами и типом карты скопирована.')}
+     catch(e){prompt('Скопируйте ссылку:',link)}
+   }catch(e){
+     console.error(e);
+     status('Не удалось сформировать ссылку: '+e.message);
+   }
+ });
+
+ $('legendToggle').addEventListener('change',e=>{ legendState.show = e.target.checked; renderLegend(); updateUrl(); scheduleDraft(); });
+ $('askExport').addEventListener('change',e=>{ askExport = e.target.checked; updateUrl(); scheduleDraft(); });
+ $('hatchToggle').addEventListener('change',e=>{ hatchEnabled = e.target.checked; renderHatches(); updateUrl(); scheduleDraft(); });
+ $('hatchStyle').addEventListener('change',e=>{ hatchStyle = e.target.value; renderHatches(); updateUrl(); scheduleDraft(); });
+ $('hatchOpacity').addEventListener('input',e=>{ hatchOpacity = Number(e.target.value); $('hatchOpacityVal').textContent=hatchOpacity+'%'; renderHatches(); });
+ $('hatchOpacity').addEventListener('change',()=>{ updateUrl(); scheduleDraft(); });
+
+ // ---------- экспорт ----------
+ async function doExport(scale, isJpeg){
+   const mime = isJpeg ? 'image/jpeg' : 'image/png';
+   const ext  = isJpeg ? 'jpg' : 'png';
+   status('Готовлю изображение карты…');
+
+   const controls = [...document.querySelectorAll('#map .leaflet-control')];
+   controls.forEach(el=>{ el.dataset._disp=el.style.display; el.style.display='none'; });
+   const legendAux = [...legendEl.querySelectorAll('.legend-edit, .legend-handle')];
+   legendAux.forEach(el=>{ el.dataset._disp=el.style.display; el.style.display='none'; });
+   const hiddenMarkers = [];
+   circles.forEach(c=>{ if(c.visible && map.hasLayer(c.marker)){ map.removeLayer(c.marker); hiddenMarkers.push(c); } });
+
+   try{
+     const baseCanvas = await html2canvas($('map'), { useCORS:true, logging:false, scale });
+     const W = baseCanvas.width, H = baseCanvas.height;
+     const out = document.createElement('canvas');
+     out.width = W; out.height = H;
+     const ctx = out.getContext('2d');
+     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+     ctx.drawImage(baseCanvas, 0, 0);
+
+     if(hatchEnabled && hatchLayer.width && hatchLayer.height){
+       ctx.drawImage(hatchLayer, 0, 0, hatchLayer.width, hatchLayer.height, 0, 0, W, H);
+     }
+
+     circles.forEach((c)=>{
+       if(!c.visible) return;
+       const pt = map.latLngToContainerPoint([c.lat, c.lng]);
+       const x = pt.x * scale; const y = pt.y * scale;
+       if(x < 0 || y < 0 || x > W || y > H) return;
+       const type=c.markerType||'dot';
+       ctx.save();
+       ctx.shadowColor='rgba(0,0,0,0.45)'; ctx.shadowBlur=4*scale; ctx.shadowOffsetY=1*scale;
+       if(type==='numbered'){
+         const r=Math.round(7*scale), ring=Math.max(1,Math.round(2*scale));
+         ctx.beginPath(); ctx.arc(x,y,r+ring,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+         ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=c.color; ctx.fill();
+         ctx.shadowColor='transparent';
+         ctx.fillStyle='#fff'; ctx.font=`700 ${Math.round(11*scale)}px system-ui,sans-serif`;
+         ctx.textAlign='center'; ctx.textBaseline='middle';
+         ctx.fillText(String(c.num), x, y+0.5*scale);
+       } else if(type==='flag'){
+         const s=Math.round(12*scale);
+         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+s, y - s*0.4); ctx.lineTo(x, y - s*0.8); ctx.closePath();
+         ctx.fillStyle=c.color; ctx.fill();
+       } else if(type==='triangle'){
+         const s=Math.round(8*scale);
+         ctx.beginPath(); ctx.moveTo(x, y-s); ctx.lineTo(x+s, y+s*0.8); ctx.lineTo(x-s, y+s*0.8); ctx.closePath();
+         ctx.fillStyle=c.color; ctx.fill();
+       } else {
+         const r=Math.round(6*scale), ring=Math.max(1,Math.round(2.25*scale));
+         ctx.beginPath(); ctx.arc(x,y,r+ring,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+         ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=c.color; ctx.fill();
+       }
+       ctx.restore();
+     });
+
+     const a=document.createElement('a');
+     a.download=`karta-s-krugami.${ext}`;
+     a.href=out.toDataURL(mime, isJpeg?0.92:undefined);
+     a.click();
+     status(`Изображение сохранено (${W}×${H}, ${ext.toUpperCase()}).`);
+   }catch(e){
+     console.error(e);
+     status('Экспорт ограничен источником картографических тайлов. Попробуйте печать браузера.');
+   }finally{
+     hiddenMarkers.forEach(c=>{ if(!map.hasLayer(c.marker)) c.marker.addTo(map); });
+     controls.forEach(el=>{ el.style.display=el.dataset._disp||''; delete el.dataset._disp; });
+     legendAux.forEach(el=>{ el.style.display=el.dataset._disp||''; delete el.dataset._disp; });
+   }
+ }
+
+ $('download').addEventListener('click', async () => {
+   if(typeof html2canvas !== 'function'){ window.print(); return; }
+   if(!askExport){ await doExport(2,false); return; }
+   const scaleStr = prompt('Масштаб экспорта: 1, 2, 3 или 4', '2');
+   if(scaleStr === null) return;
+   const scale = Math.min(4, Math.max(1, Number(scaleStr) || 2));
+   const fmtStr = prompt('Формат: png (без потерь) или jpg (меньше файл)', 'png');
+   if(fmtStr === null) return;
+   await doExport(scale, /^j/i.test(fmtStr));
+ });
+
+ // ---------- сброс ----------
+ $('reset').addEventListener('click',()=>{
+   circles.forEach(c=>{map.removeLayer(c.marker);map.removeLayer(c.shape);});
+   circles=[];nextId=1;nextNum=1;
+   const c=makeCircle(...defaultCenter);
+   selectedId=c.id;
+   Object.values(baseLayers).forEach(l=>map.removeLayer(l));
+   street.addTo(map);
+   map.setView(defaultCenter,13);
+   legendState = { x:0.72, y:0.72, show:true };
+   $('legendToggle').checked = true;
+   askExport = false; $('askExport').checked = false;
+   hatchStyle='auto'; $('hatchStyle').value='auto';
+   hatchEnabled=true; $('hatchToggle').checked=true;
+   hatchOpacity=70; $('hatchOpacity').value=70; $('hatchOpacityVal').textContent='70%';
+   syncInputs();renderList();updateUrl();scheduleDraft();renderHatches();status('');
+ });
+
+ // ---------- черновик ----------
+ let draftTimer=null;
+ function scheduleDraft(){
+   clearTimeout(draftTimer);
+   draftTimer=setTimeout(()=>{
+     try{
+       localStorage.setItem(DRAFT_KEY,enc(JSON.stringify(state())));
+     }catch(e){
+       console.warn('draft save failed', e);
+     }
+   },500);
+ }
+ function restoreDraft(){
+   try{
+     const raw=localStorage.getItem(DRAFT_KEY);if(!raw)return false;
+     const s=JSON.parse(dec(raw));
+     if(!s||!Array.isArray(s.circles)||!s.circles.length)return false;
+     applyState(s);return true;
+   }catch(e){ console.warn('draft restore failed', e); return false; }
+ }
+
+ function applyState(s){
+   try{
+     circles.forEach(c=>{map.removeLayer(c.marker);map.removeLayer(c.shape);});
+     circles=[];nextId=1;nextNum=1;
+     (s.circles||[]).slice(0,100).forEach(x=>{
+       if(Number.isFinite(x.lat)&&Number.isFinite(x.lng)&&Math.abs(x.lat)<=90&&Math.abs(x.lng)<=180){
+         makeCircle(x.lat,x.lng,x);
+       }
+     });
+     if(!circles.length){const c=makeCircle(...defaultCenter);selectedId=c.id;}
+     else{
+       const idx=Math.min(circles.length-1,Math.max(0,Number(s.selected)||0));
+       selectedId=circles[idx].id;
+     }
+     if(s.base&&baseLayers[s.base]){
+       Object.values(baseLayers).forEach(l=>map.removeLayer(l));
+       baseLayers[s.base].addTo(map);
+     }
+     if(s.legend && Number.isFinite(s.legend.x) && Number.isFinite(s.legend.y)){
+       legendState.x = s.legend.x; legendState.y = s.legend.y;
+       legendState.show = s.legend.show !== false;
+     }
+     askExport = !!s.askExport;
+     hatchStyle = s.hatchStyle || 'auto';
+     hatchEnabled = s.hatchEnabled !== false;
+     hatchOpacity = Number.isFinite(s.hatchOpacity) ? s.hatchOpacity : 70;
+     $('legendToggle').checked = legendState.show;
+     $('askExport').checked = askExport;
+     $('hatchStyle').value = hatchStyle;
+     $('hatchToggle').checked = hatchEnabled;
+     $('hatchOpacity').value = hatchOpacity;
+     $('hatchOpacityVal').textContent = hatchOpacity+'%';
+     if(circles.length){
+       const sel=getSelected()||circles[0];
+       map.setView([sel.lat,sel.lng],Math.min(18,Math.max(2,Number(s.zoom)||13)));
+     }
+     syncInputs();renderList();renderHatches();
+   }catch(e){
+     console.error('applyState failed', e);
+     status('Не удалось применить сохранённое состояние: '+e.message);
+   }
+ }
+
+ // ---------- история (переписано) ----------
+ function loadHistoryList(){
+   try{
+     const raw=localStorage.getItem(HISTORY_KEY);
+     if(!raw) return [];
+     const parsed=JSON.parse(raw);
+     if(!Array.isArray(parsed)) return [];
+     return parsed.filter(x => x && typeof x === 'object');
+   }catch(e){
+     console.warn('history parse failed', e);
+     return [];
+   }
+ }
+ function saveHistoryList(list){
+   try{
+     localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0,HISTORY_LIMIT)));
+     return true;
+   }catch(e){
+     console.warn('history save failed, reducing', e);
+     try{
+       localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0,Math.ceil(HISTORY_LIMIT/2))));
+       return true;
+     }catch(_){ return false; }
+   }
+ }
+ function fmtDate(ts){
+   try{ return new Date(ts).toLocaleString('ru-RU'); }catch(e){ return ''; }
+ }
+
+ function renderHistory(){
+   const box = document.getElementById('history');
+   if(!box){ console.warn('renderHistory: #history not found'); return; }
+   box.innerHTML = '';
+   const list = loadHistoryList();
+   console.log('renderHistory: items=', list.length, 'key=', HISTORY_KEY);
+
+   if(!list.length){
+     const e=document.createElement('div');
+     e.className='empty';
+     e.textContent='История пуста';
+     box.appendChild(e);
+     return;
+   }
+
+   list.forEach((item, idx) => {
+     try{
+       const data = (item.data && typeof item.data === 'object') ? item.data : null;
+       const circlesCount = (data && Array.isArray(data.circles)) ? data.circles.length : 0;
+       const isBroken = !data;
+
+       const row = document.createElement('div');
+       row.className = 'histitem' + (isBroken ? ' broken' : '');
+
+       const top = document.createElement('div');
+       top.className = 'htop';
+       const name = document.createElement('div');
+       name.className = 'hname';
+       name.textContent = item.name || ('Карта ' + (item.id || idx+1));
+       name.title = item.name || '';
+       top.appendChild(name);
+       row.appendChild(top);
+
+       const meta = document.createElement('div');
+       meta.className = 'hmeta';
+       meta.textContent = `${fmtDate(item.savedAt)} · кругов: ${circlesCount}` + (isBroken ? ' · запись повреждена' : '');
+       row.appendChild(meta);
+
+       const btns = document.createElement('div');
+       btns.className = 'hbtns';
+
+       const open = document.createElement('button');
+       open.textContent = 'Открыть';
+       open.disabled = isBroken;
+       open.onclick = () => {
+         if(!data){ status('Запись повреждена и не может быть открыта.'); return; }
+         applyState(data);
+         updateUrl();
+         scheduleDraft();
+         status('Карта «'+(item.name||item.id)+'» открыта.');
+       };
+
+       const rename = document.createElement('button');
+       rename.textContent = 'Переименовать';
+       rename.onclick = () => {
+         const nn = prompt('Название карты:', item.name || '');
+         if(nn === null) return;
+         const l = loadHistoryList();
+         const t = l.find(x => x.id === item.id);
+         if(t){ t.name = nn.trim() || t.name; saveHistoryList(l); renderHistory(); }
+       };
+
+       const dup = document.createElement('button');
+       dup.textContent = 'Дублировать';
+       dup.disabled = isBroken;
+       dup.onclick = () => {
+         if(!data) return;
+         const l = loadHistoryList();
+         l.unshift({id: Date.now()+Math.random(), name: (item.name||'Карта')+' (копия)', savedAt: Date.now(), data: JSON.parse(JSON.stringify(data))});
+         saveHistoryList(l);
+         renderHistory();
+         status('Создана копия.');
+       };
+
+       const del = document.createElement('button');
+       del.textContent = 'Удалить';
+       del.style.color = '#b42318';
+       del.onclick = () => {
+         if(!confirm('Удалить «'+(item.name||item.id)+'» из истории?')) return;
+         const l = loadHistoryList().filter(x => x.id !== item.id);
+         saveHistoryList(l);
+         renderHistory();
+         status('Удалено из истории.');
+       };
+
+       btns.append(open, rename, dup, del);
+       row.appendChild(btns);
+       box.appendChild(row);
+     }catch(err){
+       console.warn('renderHistory item failed', idx, err, item);
+     }
+   });
+}
+
+ $('saveHistory').addEventListener('click',()=>{
+   try{
+     const def='Карта '+new Date().toLocaleString('ru-RU');
+     const name=prompt('Название карты:',def);
+     if(name===null) return;
+     const snap = state();
+     const list = loadHistoryList();
+     list.unshift({id: Date.now()+Math.random(), name: (name.trim()||def), savedAt: Date.now(), data: snap});
+     const ok = saveHistoryList(list);
+     if(!ok){ status('Не удалось записать историю (localStorage переполнен).'); return; }
+     console.log('history saved: items=', list.length, 'key=', HISTORY_KEY);
+     renderHistory();
+     status('Карта сохранена в историю.');
+   }catch(e){
+     console.error('saveHistory failed', e);
+     status('Не удалось сохранить: '+e.message);
+   }
+ });
+
+ $('exportHistory').addEventListener('click',()=>{
+   try{
+     const list=loadHistoryList();
+     const blob=new Blob([JSON.stringify({v:1,items:list},null,2)],{type:'application/json'});
+     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='circle-maps-history.json';a.click();
+     setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+     status('История экспортирована.');
+   }catch(e){ console.error(e); status('Не удалось экспортировать: '+e.message); }
+ });
+ $('importHistory').addEventListener('click',()=>$('importFile').click());
+ $('importFile').addEventListener('change',async e=>{
+   const f=e.target.files[0];if(!f)return;
+   try{
+     const text=await f.text();const parsed=JSON.parse(text);
+     const items=Array.isArray(parsed)?parsed:(parsed.items||[]);
+     const clean=items.filter(x=>x&&x.data&&Array.isArray(x.data.circles)).map(x=>({id:x.id||Date.now()+Math.random(),name:x.name||'Импорт',savedAt:x.savedAt||Date.now(),data:x.data}));
+     if(!clean.length){status('В файле не найдено карт.');return;}
+     const list=loadHistoryList().concat(clean);
+     saveHistoryList(list);renderHistory();status('Импортировано карт: '+clean.length);
+   }catch(err){ console.error(err); status('Не удалось прочитать файл JSON.'); }
+   finally{e.target.value='';}
+ });
+
  function loadState(){
-   let loaded=false;const p=new URLSearchParams(location.search);
-   try{if(p.has('data')){const s=JSON.parse(decodeURIComponent(escape(atob(p.get('data')))));if(s.v===2&&Array.isArray(s.circles)&&s.circles.length){circles=[];s.circles.slice(0,50).forEach(x=>{if(Number.isFinite(x.lat)&&Number.isFinite(x.lng)&&Math.abs(x.lat)<=90&&Math.abs(x.lng)<=180){makeCircle(x.lat,x.lng,x)}});if(circles.length){selectedId=circles[Math.min(circles.length-1,Math.max(0,s.selected||0))].id;map.setView(circles[0].marker.getLatLng(),Math.min(18,Math.max(2,s.zoom||13)));if(baseLayers[s.base]){Object.values(baseLayers).forEach(l=>map.removeLayer(l));baseLayers[s.base].addTo(map)}loaded=true;}}}}catch(e){}
-   if(!loaded){makeCircle(...defaultCenter);selectedId=circles[0].id;}
-   syncInputs();renderList();
+   const p=new URLSearchParams(location.search);
+   if(p.has('data')){
+     try{
+       const s=JSON.parse(dec(p.get('data')));
+       if(s&&Array.isArray(s.circles)&&s.circles.length){applyState(s);renderHistory();return;}
+     }catch(e){ console.warn('url state failed', e); }
+   }
+   if(!restoreDraft()){
+     const c=makeCircle(...defaultCenter);selectedId=c.id;syncInputs();renderList();
+   }
+   renderHistory();
  }
+ window.addEventListener('popstate',()=>{loadState();});
+ window.addEventListener('resize',()=>{applyLegendPos();renderHatches();});
+ map.on('resize',()=>{applyLegendPos();renderHatches();});
+ map.on('moveend zoomend',()=>{ renderHatches(); });
  loadState();
+ renderHistory();
+ renderHatches();
 })();
 </script>
 </body></html>
