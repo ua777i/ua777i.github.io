@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Карта с кругами и центрами</title>
+<title>Карта с кругами</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <style>
 :root{--accent:#1677ff;--line:#d8e0ea;--ink:#17212f;--muted:#65758b;--bg:#f7f9fc}
@@ -57,7 +57,9 @@ button:disabled{opacity:.55;cursor:wait}
 .actions2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .note{font-size:11px;color:#8491a3;line-height:1.45;margin:10px 0 0}
 .status{font-size:12px;color:var(--muted);min-height:17px;margin-top:6px}
-.history{display:grid;gap:6px;max-height:260px;overflow:auto}
+
+/* история: увеличенная высота, не схлопывается */
+.history{display:grid;gap:6px;max-height:min(60vh, 520px);min-height:120px;overflow:auto;align-content:start}
 .histitem{border:1px solid var(--line);border-radius:9px;padding:8px;background:#fff;display:grid;gap:6px}
 .histitem.broken{border-color:#f2c2bd;background:#fff7f6}
 .histitem .htop{display:flex;align-items:center;gap:6px}
@@ -65,6 +67,9 @@ button:disabled{opacity:.55;cursor:wait}
 .histitem .hmeta{font-size:11px;color:var(--muted)}
 .histitem .hbtns{display:flex;gap:5px;flex-wrap:wrap}
 .histitem .hbtns button{padding:4px 7px;font-size:11px}
+.importlabel{display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px;cursor:pointer;font-weight:650;font-size:13px}
+.importlabel:hover{filter:brightness(.97)}
+
 #map{height:100%;width:100%;background:#e8eef4}
 .center-dot{width:16px;height:16px;border:3px solid #fff;border-radius:50%;box-shadow:0 1px 5px #0007;display:flex;align-items:center;justify-content:center;color:#fff;font:700 10px/1 system-ui,sans-serif}
 .marker-flag{width:18px;height:18px;position:relative}
@@ -86,12 +91,13 @@ button:disabled{opacity:.55;cursor:wait}
   .app{grid-template-columns:1fr;grid-template-rows:auto minmax(390px,1fr);height:auto;min-height:100%}
   .sidebar{border-right:0;border-bottom:1px solid var(--line);overflow:visible;padding:16px}
   #map{height:58vh;min-height:390px}
+  .history{max-height:none;min-height:80px}
 }
 </style>
 </head>
 <body>
 <div class="app"><aside class="sidebar">
-<h1>Карта с кругами и центрами</h1>
+<h1>Карта с кругами</h1>
 <p class="intro">Добавляйте несколько кругов. У каждого свои центр, радиус и цвет. Пересечения кругов можно выделять штриховкой. История карт хранится в браузере.</p>
 
 <div class="block">
@@ -188,7 +194,10 @@ button:disabled{opacity:.55;cursor:wait}
 
 <div class="sectionhead"><span class="label">История карт</span><button class="primary" id="saveHistory">💾 Сохранить</button></div>
 <div id="history" class="history"></div>
-<div class="actions2"><button id="exportHistory">⬇ Экспорт JSON</button><button id="importHistory">⬆ Импорт JSON</button></div>
+<div class="actions2">
+  <button id="exportHistory">⬇ Экспорт JSON</button>
+  <label for="importFile" class="importlabel">⬆ Импорт JSON</label>
+</div>
 <input id="importFile" type="file" accept="application/json" style="display:none">
 
 <p class="note">Перетащите точку, щёлкните по карте или введите координаты. Порядок наложения меняется перетаскиванием строк за ручку ≡ (верхняя — сверху), название и цвет при этом не меняются. Легенду можно перетащить мышью. Описание круга — двойной клик по строке легенды. В списке и легенде показан диаметр, в поле ввода — радиус.</p>
@@ -823,7 +832,7 @@ button:disabled{opacity:.55;cursor:wait}
    }
  }
 
- // ---------- история (переписано) ----------
+ // ---------- история ----------
  function loadHistoryList(){
    try{
      const raw=localStorage.getItem(HISTORY_KEY);
@@ -851,7 +860,6 @@ button:disabled{opacity:.55;cursor:wait}
  function fmtDate(ts){
    try{ return new Date(ts).toLocaleString('ru-RU'); }catch(e){ return ''; }
  }
-
  function renderHistory(){
    const box = document.getElementById('history');
    if(!box){ console.warn('renderHistory: #history not found'); return; }
@@ -974,18 +982,46 @@ button:disabled{opacity:.55;cursor:wait}
      status('История экспортирована.');
    }catch(e){ console.error(e); status('Не удалось экспортировать: '+e.message); }
  });
- $('importHistory').addEventListener('click',()=>$('importFile').click());
- $('importFile').addEventListener('change',async e=>{
-   const f=e.target.files[0];if(!f)return;
-   try{
-     const text=await f.text();const parsed=JSON.parse(text);
-     const items=Array.isArray(parsed)?parsed:(parsed.items||[]);
-     const clean=items.filter(x=>x&&x.data&&Array.isArray(x.data.circles)).map(x=>({id:x.id||Date.now()+Math.random(),name:x.name||'Импорт',savedAt:x.savedAt||Date.now(),data:x.data}));
-     if(!clean.length){status('В файле не найдено карт.');return;}
-     const list=loadHistoryList().concat(clean);
-     saveHistoryList(list);renderHistory();status('Импортировано карт: '+clean.length);
-   }catch(err){ console.error(err); status('Не удалось прочитать файл JSON.'); }
-   finally{e.target.value='';}
+
+ // импорт через <label for="importFile"> + FileReader, устойчиво к сбоям расширений
+ $('importFile').addEventListener('change', (e)=>{
+   const input = e.target;
+   const f = input.files && input.files[0];
+   if(!f){ status('Файл не выбран.'); return; }
+   setTimeout(()=>{
+     const reader = new FileReader();
+     reader.onload = () => {
+       try{
+         const text = String(reader.result || '');
+         const parsed = JSON.parse(text);
+         const items = Array.isArray(parsed) ? parsed : (parsed.items || []);
+         const clean = items
+           .filter(x => x && x.data && Array.isArray(x.data.circles))
+           .map(x => ({
+             id: x.id || Date.now()+Math.random(),
+             name: x.name || 'Импорт',
+             savedAt: x.savedAt || Date.now(),
+             data: x.data
+           }));
+         if(!clean.length){ status('В файле не найдено карт.'); return; }
+         const list = loadHistoryList().concat(clean);
+         saveHistoryList(list);
+         renderHistory();
+         status('Импортировано карт: ' + clean.length);
+       }catch(err){
+         console.error('import parse failed', err);
+         status('Не удалось прочитать JSON: ' + err.message);
+       }finally{
+         input.value = '';
+       }
+     };
+     reader.onerror = () => {
+       console.error('FileReader error', reader.error);
+       status('Не удалось прочитать файл: ' + ((reader.error && reader.error.message) || 'неизвестная ошибка'));
+       input.value = '';
+     };
+     reader.readAsText(f);
+   }, 0);
  });
 
  function loadState(){
