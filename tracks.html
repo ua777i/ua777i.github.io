@@ -183,6 +183,10 @@
         <div class="field"><label>Широта</label><input class="lat" type="text" inputmode="decimal" autocomplete="off" placeholder="Например, 55.751244"></div>
         <div class="field"><label>Долгота</label><input class="lng" type="text" inputmode="decimal" autocomplete="off" placeholder="Например, 37.618423"></div>
       </div>
+      <div class="field">
+        <label>Или обе координаты в одном поле</label>
+        <input class="coord-pair" type="text" inputmode="decimal" autocomplete="off" placeholder="55.751105, 54.997289">
+      </div>
       <button class="btn primary full add-point">＋ Добавить точку</button>
       <div class="section-title" style="margin:12px 0 5px"><span>Точки маршрута</span><span class="point-count">0 точек</span></div>
       <div class="points"><div class="empty">Пока нет добавленных точек</div></div>
@@ -206,21 +210,44 @@
 
     const latInput = card.querySelector('.lat');
     const lngInput = card.querySelector('.lng');
+    const pairInput = card.querySelector('.coord-pair');
     card.querySelector('.add-point').addEventListener('click', () => {
       const parseCoordinate = value => {
         const normalized = String(value).trim().replace(/\s+/g, '').replace(',', '.');
         if (!normalized || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized)) return NaN;
         return Number(normalized);
       };
-      const lat = parseCoordinate(latInput.value), lng = parseCoordinate(lngInput.value);
-      if (latInput.value.trim()==='' || lngInput.value.trim()==='' ||
-          !Number.isFinite(lat) || !Number.isFinite(lng) ||
+      let lat, lng;
+      if (pairInput.value.trim()) {
+        // Combined format: latitude, longitude. Accept decimal comma or dot,
+        // with a semicolon/space as pair separator when decimal commas are used.
+        const pair = pairInput.value.trim();
+        let parts = pair.split(/[;\n]/).map(x => x.trim()).filter(Boolean);
+        if (parts.length !== 2) {
+          const commaParts = pair.split(/\s*,\s*/);
+          if (commaParts.length === 2) parts = commaParts;
+          else {
+            const whitespaceParts = pair.split(/\s+/).filter(Boolean);
+            if (whitespaceParts.length === 2) parts = whitespaceParts;
+          }
+        }
+        if (parts.length !== 2) {
+          status('Введите две координаты через запятую: широта, долгота. Например: 55.751105, 54.997289.');
+          return;
+        }
+        lat = parseCoordinate(parts[0]);
+        lng = parseCoordinate(parts[1]);
+      } else {
+        lat = parseCoordinate(latInput.value);
+        lng = parseCoordinate(lngInput.value);
+      }
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) ||
           lat < -90 || lat > 90 || lng < -180 || lng > 180) {
         status('Проверьте координаты: широта −90…90, долгота −180…180.');
         return;
       }
       addPoint(track, lat, lng);
-      status(`Точка добавлена в «${track.name}». Координаты оставлены в полях — их можно отредактировать для следующей точки.`);
+      status(`Точка добавлена в «${track.name}». Введённые координаты остаются в полях.`);
     });
     card.querySelector('.track-name').addEventListener('input', e => {
       track.name = e.target.value.trim() || `Трек ${track.id}`;
