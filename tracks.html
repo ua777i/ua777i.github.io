@@ -46,9 +46,20 @@
     .empty { color:#8a96a8; font-size:11px; padding:5px 2px; }
     .hint { margin:11px 1px 0; color:#8491a3; font-size:10.5px; line-height:1.5; }
     .point-marker { width:19px; height:19px; display:flex; align-items:center; justify-content:center; border:1.5px solid #fff; border-radius:50%; color:#fff; font:750 9px/1 system-ui,sans-serif; box-shadow:0 1px 4px #0004; }
+    .measure-tool-button { font-size:17px !important; line-height:1; }
+    .measure-tool-button.measure-toggle-active { background:#eaf2ff !important; border-color:#1677ff !important; color:#1458b5; box-shadow:0 0 0 2px #1677ff22; }
+    .measure-distance-label { background:#fff; border:1px solid #2563eb; border-radius:7px; padding:3px 6px; color:#173b83; font:750 11px/1.2 system-ui,sans-serif; white-space:nowrap; box-shadow:0 1px 5px #0003; }
+    .measure-action-bubble { display:flex; align-items:center; gap:4px; padding:4px; border:1px solid #cbd5e1; border-radius:9px; background:rgba(255,255,255,.98); box-shadow:0 2px 9px #0003; white-space:nowrap; }
+    .measure-action-distance { min-width:42px; padding:0 5px; color:#173b83; font:800 11px/1 system-ui,sans-serif; text-align:center; }
+    .measure-action-button { width:23px; height:23px; display:flex; align-items:center; justify-content:center; border:0; border-radius:6px; color:#fff; font:800 15px/1 system-ui,sans-serif; cursor:pointer; }
+    .measure-action-cancel { background:#e14b4b; }
+    .measure-action-finish { background:#16a34a; }
+    .measure-point { width:12px; height:12px; border:2px solid #fff; border-radius:50%; background:#2563eb; box-shadow:0 1px 4px #0006; cursor:grab; }
+    .measure-point:active { cursor:grabbing; }
+    .measure-active, .measure-active .leaflet-grab { cursor:crosshair !important; }
     .map-wrap { position:relative; min-width:0; min-height:0; }
     #map { width:100%; height:100%; background:#e8eef4; }
-    .map-legend { position:absolute; z-index:700; top:18px; right:18px; min-width:180px; max-width:min(340px,45%); padding:11px 13px; border:1px solid #0002; border-radius:11px; background:rgba(255,255,255,.95); box-shadow:0 5px 20px #0002; cursor:move; user-select:none; }
+    .map-legend { position:absolute; z-index:620; bottom:24px; left:14px; right:auto; top:auto; min-width:180px; max-width:min(340px,45%); padding:11px 13px; border:1px solid #0002; border-radius:11px; background:rgba(255,255,255,.95); box-shadow:0 5px 20px #0002; cursor:move; user-select:none; }
     .legend-title { display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:12px; font-weight:800; margin-bottom:6px; }
     .legend-grip { color:#8793a3; font-size:12px; }
     .legend-row { display:flex; align-items:center; gap:8px; padding:4px 0; font-size:12px; }
@@ -73,9 +84,10 @@
       .sidebar { border-right:0; border-bottom:1px solid var(--line); overflow:visible; }
       .map-wrap { height:68vh; min-height:430px; }
       #map { height:100%; }
-      .map-legend { max-width:55%; top:62px; }
+      .map-legend { max-width:min(55%, 260px); bottom:20px; top:auto; left:12px; right:auto; }
       .layer-switch { top:14px; right:14px; }
       .layer-switch button { padding:7px 9px; font-size:11px; }
+      .map-legend { max-width:min(55%, 260px); }
     }
   </style>
 </head>
@@ -118,6 +130,7 @@
     <div class="map-toolbar">
       <button id="mapZoomIn" title="Приблизить">＋</button>
       <button id="mapZoomOut" title="Отдалить">−</button>
+      <button id="measureToggle" class="measure-tool-button" title="Измерить расстояние" aria-label="Измерить расстояние">📏</button>
     </div>
     <div class="layer-switch" role="group" aria-label="Слой карты">
       <button type="button" class="active" data-layer="street">Карта</button>
@@ -165,6 +178,212 @@
   street.addTo(map);
 
   const status = message => { $('status').textContent = message; };
+
+  // Инструмент линейки: фиксированные точки, сегменты и временная линия до курсора.
+  let measuring = false;
+  let measurementPointDragging = false;
+  let measurePoints = [];
+  let measureLine = null;
+  let measurePreview = null;
+  let measurePreviewLabel = null;
+  let measureActionMarker = null;
+  let measurePointMarkers = [];
+  let measureSegmentLabels = [];
+
+  const distanceMeters = (a, b) => Math.round(map.distance([a.lat,a.lng], [b.lat,b.lng]));
+  const formatDistance = meters => {
+    const rounded = Math.round(meters);
+    if (rounded < 1000) return `${rounded.toLocaleString('ru-RU')} м`;
+    return `${(rounded / 1000).toFixed(2).replace('.', ',')} км`;
+  };
+
+  function clearMeasureLayers() {
+    [measureLine, measurePreview, measurePreviewLabel, measureActionMarker, ...measurePointMarkers, ...measureSegmentLabels]
+      .filter(Boolean).forEach(layer => { if (map.hasLayer(layer)) map.removeLayer(layer); });
+    measureLine = null; measurePreview = null; measurePreviewLabel = null; measureActionMarker = null;
+    measurePointMarkers = []; measureSegmentLabels = [];
+  }
+
+  function makeDistanceLabel(latlng, meters) {
+    return L.marker(latlng, {
+      interactive:false,
+      icon:L.divIcon({
+        className:'',
+        html:`<div class="measure-distance-label">${formatDistance(meters)}</div>`,
+        iconSize:null,
+        iconAnchor:[0,0]
+      })
+    }).addTo(map);
+  }
+
+  function updateMeasurementPreview(previewLatLng) {
+    if (measurePreview && map.hasLayer(measurePreview)) map.removeLayer(measurePreview);
+    if (measurePreviewLabel && map.hasLayer(measurePreviewLabel)) map.removeLayer(measurePreviewLabel);
+    measurePreview = null;
+    measurePreviewLabel = null;
+
+    if (!measuring || !measurePoints.length || !previewLatLng) return;
+
+    const last = measurePoints[measurePoints.length - 1];
+    const end = {lat:previewLatLng.lat, lng:previewLatLng.lng};
+    measurePreview = L.polyline([[last.lat,last.lng],[end.lat,end.lng]], {
+      color:'#2563eb', weight:2.5, opacity:0.9, dashArray:'5 5',
+      interactive:false
+    }).addTo(map);
+
+    const mid = L.latLng((last.lat+end.lat)/2, (last.lng+end.lng)/2);
+    measurePreviewLabel = makeDistanceLabel(mid, distanceMeters(last,end));
+  }
+
+  function renderMeasurement(persist = true) {
+    clearMeasureLayers();
+
+    const fixed = measurePoints.map(p => [p.lat,p.lng]);
+    if (fixed.length > 1) {
+      measureLine = L.polyline(fixed, {
+        color:'#2563eb', weight:3, opacity:0.95, dashArray:'8 6',
+        lineCap:'round', lineJoin:'round'
+      }).addTo(map);
+
+      for (let i=1; i<measurePoints.length; i++) {
+        const a=measurePoints[i-1], b=measurePoints[i];
+        const mid=L.latLng((a.lat+b.lat)/2,(a.lng+b.lng)/2);
+        measureSegmentLabels.push(makeDistanceLabel(mid, distanceMeters(a,b)));
+      }
+    }
+
+    measurePoints.forEach((p,index) => {
+      const marker=L.marker([p.lat,p.lng], {
+        draggable:true,
+        autoPan:true,
+        riseOnHover:true,
+        icon:L.divIcon({
+          className:'',
+          html:`<div class="measure-point" title="Перетащите, чтобы изменить точку"></div>`,
+          iconSize:[12,12], iconAnchor:[6,6]
+        })
+      }).addTo(map);
+
+      marker.on('dragstart', () => { measurementPointDragging = true; });
+      marker.on('drag', event => {
+        const pos=event.target.getLatLng();
+        measurePoints[index]={lat:pos.lat,lng:pos.lng};
+        if (measureLine) measureLine.setLatLngs(measurePoints.map(point => [point.lat,point.lng]));
+        for (let segment=0; segment<measureSegmentLabels.length; segment++) {
+          const a=measurePoints[segment], b=measurePoints[segment+1];
+          const mid=L.latLng((a.lat+b.lat)/2,(a.lng+b.lng)/2);
+          const label=measureSegmentLabels[segment];
+          label.setLatLng(mid);
+          label.setIcon(L.divIcon({
+            className:'',
+            html:`<div class="measure-distance-label">${formatDistance(distanceMeters(a,b))}</div>`,
+            iconSize:null,
+            iconAnchor:[0,0]
+          }));
+        }
+        if (index === measurePoints.length-1 && measureActionMarker) {
+          measureActionMarker.setLatLng(pos);
+          const distance = measurePoints.length > 1
+            ? distanceMeters(measurePoints[measurePoints.length-2], measurePoints[measurePoints.length-1])
+            : 0;
+          const distanceNode = measureActionMarker.getElement()?.querySelector('.measure-action-distance');
+          if (distanceNode) distanceNode.textContent = formatDistance(distance);
+        }
+        updateMeasurementPreview(null);
+      });
+      marker.on('dragend', () => {
+        measurementPointDragging = false;
+        const pos=marker.getLatLng();
+        measurePoints[index]={lat:pos.lat,lng:pos.lng};
+        renderMeasurement();
+        status(`Точка ${index+1} перемещена. Расстояния пересчитаны.`);
+      });
+      measurePointMarkers.push(marker);
+    });
+
+    // Контролы привязаны к последней ЗАФИКСИРОВАННОЙ точке, а не к курсору.
+    // Поэтому они остаются на месте и доступны мышью даже после остановки рисования.
+    if (measurePoints.length) {
+      const lastIndex = measurePoints.length - 1;
+      const last = measurePoints[lastIndex];
+      const lastDistance = measurePoints.length > 1
+        ? distanceMeters(measurePoints[lastIndex-1], last)
+        : 0;
+      const bubbleIcon = L.divIcon({
+        className:'',
+        html:`<div class="measure-action-bubble">
+          <span class="measure-action-distance">${formatDistance(lastDistance)}</span>
+          <button type="button" class="measure-action-button measure-action-cancel" title="Удалить последнюю точку" aria-label="Удалить последнюю точку">×</button>
+          <button type="button" class="measure-action-button measure-action-finish" title="Завершить измерение" aria-label="Завершить измерение">✓</button>
+        </div>`,
+        iconSize:[150,34],
+        iconAnchor:[-8,42]
+      });
+
+      measureActionMarker = L.marker([last.lat,last.lng], {
+        icon:bubbleIcon, interactive:true, keyboard:false, zIndexOffset:2000
+      }).addTo(map);
+
+      const element = measureActionMarker.getElement();
+      if (element) {
+        L.DomEvent.disableClickPropagation(element);
+        L.DomEvent.disableScrollPropagation(element);
+        element.querySelector('.measure-action-cancel')?.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!measurePoints.length) return;
+          const removedIndex = measurePoints.length;
+          measurePoints.pop();
+          renderMeasurement();
+          status(measurePoints.length
+            ? `Последняя точка (${removedIndex}) удалена.`
+            : 'Последняя точка удалена. Измерение очищено.');
+        });
+        element.querySelector('.measure-action-finish')?.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          setMeasuring(false);
+          status('Измерение завершено и сохранено на карте.');
+        });
+      }
+    }
+
+    if (persist) scheduleAutosave();
+  }
+
+  function setMeasuring(active) {
+    measuring=active;
+    map.getContainer().classList.toggle('measure-active',active);
+    $('measureToggle').textContent='📏';
+    $('measureToggle').title=active ? 'Остановить измерение (ESC)' : 'Измерить расстояние';
+    $('measureToggle').classList.toggle('measure-toggle-active',active);
+    if (!active) renderMeasurement();
+    scheduleAutosave();
+  }
+
+  map.on('click', e => {
+    if (!measuring) return;
+    measurePoints.push({lat:e.latlng.lat,lng:e.latlng.lng});
+    renderMeasurement();
+    status(measurePoints.length===1
+      ? 'Первая точка линейки установлена. Перемещайте курсор, чтобы увидеть расстояние.'
+      : `Добавлена точка линейки. Всего точек: ${measurePoints.length}.`);
+  });
+  map.on('mousemove', e => {
+    if (measuring && measurePoints.length && !measurementPointDragging) {
+      updateMeasurementPreview(e.latlng);
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && measuring) {
+      e.preventDefault();
+      setMeasuring(false); // Убирает только динамический участок, фиксированные сегменты остаются.
+      status('Постановка следующей точки отменена. Измеренная линия сохранена.');
+    }
+  });
+
+  $('measureToggle').addEventListener('click', () => setMeasuring(!measuring));
   const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[ch]));
@@ -444,7 +663,8 @@
         weight: track.weight,
         visible: track.visible,
         points: track.points.map(p => ({lat:p.lat, lng:p.lng}))
-      }))
+      })),
+      measurement: measurePoints.map(p => ({lat:p.lat, lng:p.lng}))
     };
   }
 
@@ -477,6 +697,12 @@
       redrawTrack(track);
       renderPoints(track);
     });
+    setMeasuring(false);
+    measurePoints = Array.isArray(state.measurement) ? state.measurement
+      .filter(p => p && Number.isFinite(Number(p.lat)) && Number.isFinite(Number(p.lng)) &&
+        Number(p.lat)>=-90 && Number(p.lat)<=90 && Number(p.lng)>=-180 && Number(p.lng)<=180)
+      .map(p => ({lat:Number(p.lat),lng:Number(p.lng)})) : [];
+    renderMeasurement();
     if (state.showLegend !== undefined) $('showLegend').checked = !!state.showLegend;
     if (state.smoothZoom !== undefined) {
       $('smoothZoom').checked = !!state.smoothZoom;
@@ -607,10 +833,13 @@
   $('showLegend').addEventListener('change', () => { renderLegend(); scheduleAutosave(); });
   $('fitAll').addEventListener('click', fitAllTracks);
   $('clearAll').addEventListener('click', () => {
-    if (!confirm('Удалить все точки во всех трёх треках?')) return;
+    if (!confirm('Удалить все точки треков и измерительную линейку?')) return;
     tracks.forEach(t => { t.points=[]; redrawTrack(t); renderPoints(t); });
+    setMeasuring(false);
+    measurePoints=[];
+    renderMeasurement();
     scheduleAutosave();
-    status('Все треки очищены. Пустая карта сохранена в автосохранении.');
+    status('Все треки и линейка очищены. Пустая карта сохранена в автосохранении.');
   });
   $('mapZoomIn').addEventListener('click', () => map.zoomIn(1,{animate:true}));
   $('mapZoomOut').addEventListener('click', () => map.zoomOut(1,{animate:true}));
