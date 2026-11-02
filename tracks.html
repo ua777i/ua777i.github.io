@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Сравнение треков на карте</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <style>
+    :root {
+      --accent: #1677ff; --line: #dce3ec; --ink: #17212f;
+      --muted: #66758a; --bg: #f5f7fb; --sidebar: 360px;
+    }
+    * { box-sizing: border-box; }
+    html, body { width:100%; height:100%; margin:0; font-family:Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif; color:var(--ink); }
+    button,input,select { font:inherit; }
+    .app { display:grid; grid-template-columns:var(--sidebar) minmax(0,1fr); height:100%; min-height:620px; }
+    .sidebar { overflow:auto; padding:22px 20px 26px; background:#fbfcfe; border-right:1px solid var(--line); z-index:500; }
+    h1 { margin:0 0 8px; font-size:22px; line-height:1.2; letter-spacing:-.55px; color:#152238; }
+    .intro { margin:0 0 20px; color:var(--muted); font-size:12.5px; line-height:1.55; max-width:310px; }
+    .section-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:21px 0 10px; font-size:13px; font-weight:800; color:#26364c; letter-spacing:.1px; }
+    .track-card { border:1px solid #dfe5ee; border-radius:14px; padding:14px; margin-bottom:12px; background:#fff; box-shadow:0 2px 7px #1b355008; }
+    .track-card:focus-within { border-color:#c7d9f5; box-shadow:0 0 0 3px #1677ff0b; }
+    .track-head { display:flex; align-items:center; gap:8px; margin-bottom:13px; }
+    .track-head strong { font-size:13px; white-space:nowrap; color:#25354b; }
+    .track-name { min-width:0; flex:1; height:34px; border:1px solid var(--line); border-radius:8px; padding:0 9px; font-size:12px; }
+    .track-state { width:8px; height:8px; border-radius:50%; flex:0 0 8px; }
+    label { display:block; margin:0 0 5px; font-size:11.5px; font-weight:700; color:#344256; }
+    .coord-grid,.settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .field { min-width:0; margin-bottom:10px; }
+    .field input,.field select { width:100%; height:38px; border:1px solid #dce3ec; border-radius:9px; padding:0 10px; outline:none; background:#fff; color:var(--ink); font-size:12px; }
+    .field input:focus,.field select:focus,.track-name:focus { border-color:var(--accent); box-shadow:0 0 0 3px #1677ff18; }
+    .colors { display:flex; flex-wrap:wrap; gap:7px; padding:2px 0 5px; margin-bottom:12px; }
+    .swatch { width:21px; height:21px; border-radius:50%; padding:0; border:2px solid #fff; box-shadow:0 0 0 1px #cbd5e1; cursor:pointer; }
+    .swatch.active { box-shadow:0 0 0 2px var(--accent); }
+    .btn { border:1px solid #dce3ec; background:#fff; color:var(--ink); border-radius:9px; min-height:37px; padding:8px 11px; font-size:12px; font-weight:700; cursor:pointer; transition:background .15s,border-color .15s,transform .15s; }
+    .btn:active { transform:translateY(1px); }
+    .btn:hover { filter:brightness(.97); }
+    .btn.primary { color:#fff; background:var(--accent); border-color:var(--accent); }
+    .btn.full { width:100%; }
+    .btn-row { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .points { display:grid; gap:5px; margin:6px 0 12px; max-height:170px; overflow:auto; padding-right:2px; }
+    .point-row { display:flex; align-items:center; gap:7px; padding:6px 8px; border-radius:8px; background:var(--bg); font-size:11px; }
+    .point-row span:nth-child(2) { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .point-row button { border:0; background:transparent; color:#a33; cursor:pointer; font-size:14px; padding:0 3px; }
+    .empty { color:#8a96a8; font-size:11px; padding:5px 2px; }
+    .hint { margin:11px 1px 0; color:#8491a3; font-size:10.5px; line-height:1.5; }
+    .point-marker { width:19px; height:19px; display:flex; align-items:center; justify-content:center; border:1.5px solid #fff; border-radius:50%; color:#fff; font:750 9px/1 system-ui,sans-serif; box-shadow:0 1px 4px #0004; }
+    .map-wrap { position:relative; min-width:0; min-height:0; }
+    #map { width:100%; height:100%; background:#e8eef4; }
+    .map-legend { position:absolute; z-index:700; top:18px; right:18px; min-width:180px; max-width:min(340px,45%); padding:11px 13px; border:1px solid #0002; border-radius:11px; background:rgba(255,255,255,.95); box-shadow:0 5px 20px #0002; cursor:move; user-select:none; }
+    .legend-title { display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:12px; font-weight:800; margin-bottom:6px; }
+    .legend-grip { color:#8793a3; font-size:12px; }
+    .legend-row { display:flex; align-items:center; gap:8px; padding:4px 0; font-size:12px; }
+    .legend-line { width:25px; height:0; border-top:3px solid; flex:0 0 25px; }
+    .legend-row input { min-width:0; width:100%; border:0; outline:0; background:transparent; font-size:12px; color:var(--ink); padding:2px 0; }
+    .legend-row input:focus { border-bottom:1px solid var(--accent); }
+    .map-toolbar { position:absolute; z-index:600; left:14px; top:14px; display:flex; gap:6px; }
+    .map-toolbar button { width:34px; height:34px; border:1px solid #cfd7e2; border-radius:8px; background:#fff; box-shadow:0 2px 7px #0002; font-size:17px; cursor:pointer; }
+    .layer-switch { position:absolute; z-index:600; top:14px; right:14px; display:flex; gap:3px; padding:4px; border:1px solid #cfd7e2; border-radius:11px; background:rgba(255,255,255,.96); box-shadow:0 2px 9px #0002; }
+    .layer-switch button { border:0; border-radius:7px; padding:8px 12px; background:transparent; color:#344256; font-size:12px; font-weight:750; cursor:pointer; }
+    .layer-switch button.active { background:#1677ff; color:#fff; }
+    .status { min-height:18px; margin-top:8px; color:var(--muted); font-size:11px; line-height:1.4; }
+    .global-block { padding:13px 14px; background:#fff; border:1px solid #dfe5ee; border-radius:12px; box-shadow:0 2px 7px #1b355006; }
+    .check { display:flex; align-items:center; gap:7px; font-size:11.5px; color:#344256; margin-top:8px; }
+    .check input { accent-color:var(--accent); }
+    .track-visibility { display:flex; align-items:center; justify-content:flex-start; gap:9px; width:100%; min-height:38px; margin:0; padding:0 10px; border:1px solid #dce3ec; border-radius:9px; background:#fff; color:#344256; font-size:11.5px; font-weight:600; line-height:1.2; white-space:nowrap; cursor:pointer; }
+    .track-visibility input { appearance:auto; -webkit-appearance:checkbox; display:block; width:14px; height:14px; flex:0 0 14px; margin:0; padding:0; accent-color:var(--accent); cursor:pointer; }
+    .track-visibility span { display:block; }
+    .leaflet-control-attribution { font-size:9px !important; }
+    @media(max-width:800px) {
+      .app { grid-template-columns:1fr; grid-template-rows:auto minmax(430px,1fr); height:auto; min-height:100%; }
+      .sidebar { border-right:0; border-bottom:1px solid var(--line); overflow:visible; }
+      .map-wrap { height:68vh; min-height:430px; }
+      #map { height:100%; }
+      .map-legend { max-width:55%; top:62px; }
+      .layer-switch { top:14px; right:14px; }
+      .layer-switch button { padding:7px 9px; font-size:11px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <h1>Сравнение треков на карте</h1>
+    <p class="intro">Добавляйте координаты в три независимых маршрута. Точки соединяются по порядку ввода, а все треки отображаются одновременно на одной карте.</p>
+
+    <div class="section-title">Отображение</div>
+    <div class="global-block">
+      <label class="check" style="margin-top:0"><input type="checkbox" id="smoothZoom" checked> Плавное масштабирование колёсиком</label>
+      <label class="check"><input type="checkbox" id="showLegend" checked> Показывать легенду на карте</label>
+    </div>
+
+    <div class="section-title">Треки</div>
+    <div id="tracks"></div>
+
+    <div class="section-title">Проект и карта</div>
+    <div class="btn-row">
+      <button class="btn" id="exportJson">↓ Экспорт JSON</button>
+      <button class="btn" id="importJson">↑ Импорт JSON</button>
+    </div>
+    <input type="file" id="jsonFile" accept=".json,application/json" hidden>
+    <button class="btn full" id="shareLink" style="margin-top:7px">⧉ Скопировать ссылку на карту</button>
+
+    <div class="section-title">Действия</div>
+    <div class="btn-row">
+      <button class="btn primary" id="fitAll">Показать все треки</button>
+      <button class="btn" id="clearAll">Очистить всё</button>
+    </div>
+    <button class="btn full" id="saveImage" style="margin-top:8px">↓ Сохранить карту как изображение</button>
+    <div class="status" id="status" role="status"></div>
+    <p class="hint">Координаты вводятся в десятичных градусах. Широта: от −90 до 90, долгота: от −180 до 180. Чтобы добавить следующую точку, заполните поля и нажмите «Добавить точку» в нужном блоке. Легенду можно перетаскивать мышью или пальцем, а подписи — редактировать прямо на карте.</p>
+  </aside>
+
+  <main class="map-wrap">
+    <div id="map" aria-label="Карта с тремя маршрутами"></div>
+    <div class="map-toolbar">
+      <button id="mapZoomIn" title="Приблизить">＋</button>
+      <button id="mapZoomOut" title="Отдалить">−</button>
+    </div>
+    <div class="layer-switch" role="group" aria-label="Слой карты">
+      <button type="button" class="active" data-layer="street">Карта</button>
+      <button type="button" data-layer="satellite">Спутник</button>
+      <button type="button" data-layer="hybrid">Гибрид</button>
+    </div>
+    <div class="map-legend" id="legend">
+      <div class="legend-title"><span>Легенда треков</span><span class="legend-grip">⠿ перетащить</span></div>
+      <div id="legendRows"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const palette = ['#1677ff','#e53935','#16a34a','#f59e0b','#9333ea','#06b6d4'];
+  const tracks = [
+    { id:1, name:'Трек 1', color:palette[0], weight:4, points:[], layers:[], visible:true },
+    { id:2, name:'Трек 2', color:palette[1], weight:4, points:[], layers:[], visible:true },
+    { id:3, name:'Трек 3', color:palette[2], weight:4, points:[], layers:[], visible:true }
+  ];
+  const $ = id => document.getElementById(id);
+  const map = L.map('map', {
+    zoomControl:false, preferCanvas:true, zoomSnap:0.1, zoomDelta:0.25,
+    wheelPxPerZoomLevel:180, wheelDebounceTime:15, zoomAnimation:true,
+    fadeAnimation:true, markerZoomAnimation:true
+  }).setView([55.751244,37.618423], 5);
+
+  const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:19, crossOrigin:true,
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  });
+  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom:19, crossOrigin:true, attribution:'Tiles &copy; Esri'
+  });
+  const labels = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom:19, crossOrigin:true, attribution:'Labels &copy; Esri'
+  });
+  const hybrid = L.layerGroup([satellite, labels]);
+  street.addTo(map);
+
+  const status = message => { $('status').textContent = message; };
+  const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
+  const fmt = n => Number(n).toFixed(6);
+
+  function makeTrackCard(track) {
+    const card = document.createElement('section');
+    card.className = 'track-card';
+    card.dataset.track = track.id;
+    card.innerHTML = `
+      <div class="track-head">
+        <span class="track-state" style="background:${track.color}"></span>
+        <strong>Маршрут ${track.id}</strong>
+        <input class="track-name" aria-label="Название трека ${track.id}" value="${escapeHtml(track.name)}">
+      </div>
+      <div class="coord-grid">
+        <div class="field"><label>Широта</label><input class="lat" type="text" inputmode="decimal" autocomplete="off" placeholder="Например, 55.751244"></div>
+        <div class="field"><label>Долгота</label><input class="lng" type="text" inputmode="decimal" autocomplete="off" placeholder="Например, 37.618423"></div>
+      </div>
+      <button class="btn primary full add-point">＋ Добавить точку</button>
+      <div class="section-title" style="margin:12px 0 5px"><span>Точки маршрута</span><span class="point-count">0 точек</span></div>
+      <div class="points"><div class="empty">Пока нет добавленных точек</div></div>
+      <div class="settings-grid">
+        <div class="field">
+          <label>Толщина линии, px</label>
+          <input class="weight" type="number" min="1" max="20" step="1" value="${track.weight}">
+        </div>
+        <div class="field">
+          <label>Отображение</label>
+          <label class="track-visibility"><input class="visibility" type="checkbox" checked><span>Показывать трек</span></label>
+        </div>
+      </div>
+      <label>Цвет трека</label>
+      <div class="colors">${palette.map(c => `<button type="button" class="swatch ${c===track.color?'active':''}" data-color="${c}" style="background:${c}" title="${c}" aria-label="Выбрать цвет ${c}"></button>`).join('')}</div>
+      <div class="btn-row">
+        <button class="btn remove-last">Удалить последнюю</button>
+        <button class="btn clear-track">Очистить трек</button>
+      </div>`;
+    $('tracks').appendChild(card);
+
+    const latInput = card.querySelector('.lat');
+    const lngInput = card.querySelector('.lng');
+    card.querySelector('.add-point').addEventListener('click', () => {
+      const parseCoordinate = value => {
+        const normalized = String(value).trim().replace(/\s+/g, '').replace(',', '.');
+        if (!normalized || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized)) return NaN;
+        return Number(normalized);
+      };
+      const lat = parseCoordinate(latInput.value), lng = parseCoordinate(lngInput.value);
+      if (latInput.value.trim()==='' || lngInput.value.trim()==='' ||
+          !Number.isFinite(lat) || !Number.isFinite(lng) ||
+          lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        status('Проверьте координаты: широта −90…90, долгота −180…180.');
+        return;
+      }
+      addPoint(track, lat, lng);
+      status(`Точка добавлена в «${track.name}». Координаты оставлены в полях — их можно отредактировать для следующей точки.`);
+    });
+    card.querySelector('.track-name').addEventListener('input', e => {
+      track.name = e.target.value.trim() || `Трек ${track.id}`;
+      renderLegend();
+    });
+    card.querySelector('.weight').addEventListener('change', e => {
+      const value = Math.round(Number(e.target.value));
+      track.weight = Math.max(1, Math.min(20, Number.isFinite(value) ? value : 4));
+      e.target.value = track.weight;
+      redrawTrack(track);
+    });
+    card.querySelector('.visibility').addEventListener('change', e => {
+      track.visible = e.target.checked;
+      redrawTrack(track);
+      renderLegend();
+    });
+    card.querySelectorAll('.swatch').forEach(button => button.addEventListener('click', () => {
+      track.color = button.dataset.color;
+      card.querySelectorAll('.swatch').forEach(b => b.classList.toggle('active', b===button));
+      card.querySelector('.track-state').style.background = track.color;
+      redrawTrack(track);
+      renderLegend();
+    }));
+    card.querySelector('.remove-last').addEventListener('click', () => {
+      if (!track.points.length) return;
+      track.points.pop(); redrawTrack(track); renderPoints(track); fitAllTracks();
+    });
+    card.querySelector('.clear-track').addEventListener('click', () => {
+      track.points = []; redrawTrack(track); renderPoints(track); status(`«${track.name}» очищен.`);
+    });
+  }
+
+  function addPoint(track, lat, lng) {
+    track.points.push({lat,lng});
+    redrawTrack(track);
+    renderPoints(track);
+    const marker = track.layers.markers[track.layers.markers.length-1];
+    if (marker) marker.openTooltip();
+    map.flyTo([lat,lng], Math.max(map.getZoom(), 7), {duration:0.8});
+  }
+
+  function redrawTrack(track) {
+    if (track.layers.line) map.removeLayer(track.layers.line);
+    (track.layers.markers || []).forEach(marker => map.removeLayer(marker));
+    track.layers = {line:null, markers:[]};
+    if (!track.visible || !track.points.length) { renderLegend(); return; }
+
+    const latlngs = track.points.map(p => [p.lat,p.lng]);
+    if (latlngs.length > 1) {
+      track.layers.line = L.polyline(latlngs, {
+        color:track.color, weight:track.weight, opacity:0.95,
+        lineCap:'round', lineJoin:'round'
+      }).addTo(map);
+    }
+    track.points.forEach((point,index) => {
+      const numberIcon = L.divIcon({
+        className:'',
+        html:`<div class="point-marker" style="background:${track.color}">${index+1}</div>`,
+        iconSize:[19,19],
+        iconAnchor:[9.5,9.5]
+      });
+      const marker = L.marker([point.lat,point.lng], {icon:numberIcon, keyboard:true})
+        .addTo(map);
+      marker.bindTooltip(`${escapeHtml(track.name)} · точка ${index+1}<br>${fmt(point.lat)}, ${fmt(point.lng)}`);
+      track.layers.markers.push(marker);
+    });
+    renderLegend();
+  }
+
+  function renderPoints(track) {
+    const card = document.querySelector(`[data-track="${track.id}"]`);
+    if (!card) return;
+    const list = card.querySelector('.points');
+    card.querySelector('.point-count').textContent = `${track.points.length} точек`;
+    list.innerHTML = '';
+    if (!track.points.length) {
+      list.innerHTML = '<div class="empty">Пока нет добавленных точек</div>';
+      return;
+    }
+    track.points.forEach((p,index) => {
+      const row = document.createElement('div');
+      row.className = 'point-row';
+      const dot = document.createElement('span');
+      dot.style.cssText = `width:8px;height:8px;border-radius:50%;background:${track.color};flex:0 0 8px`;
+      const text = document.createElement('span');
+      text.textContent = `${index+1}. ${fmt(p.lat)}, ${fmt(p.lng)}`;
+      const focus = document.createElement('button');
+      focus.type = 'button'; focus.textContent = '◎'; focus.title = 'Показать точку';
+      focus.addEventListener('click', () => map.flyTo([p.lat,p.lng], Math.max(10,map.getZoom()), {duration:0.7}));
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.textContent = '×'; remove.title = 'Удалить точку';
+      remove.addEventListener('click', () => {
+        track.points.splice(index,1); redrawTrack(track); renderPoints(track);
+      });
+      row.append(dot,text,focus,remove); list.appendChild(row);
+    });
+  }
+
+  function renderLegend() {
+    const rows = $('legendRows');
+    rows.innerHTML = '';
+    tracks.forEach(track => {
+      const row = document.createElement('div');
+      row.className = 'legend-row';
+      row.style.opacity = track.visible ? '1' : '.45';
+      const line = document.createElement('span');
+      line.className = 'legend-line';
+      line.style.borderTopColor = track.color;
+      line.style.borderTopWidth = `${Math.max(2,track.weight)}px`;
+      const input = document.createElement('input');
+      input.value = track.name;
+      input.setAttribute('aria-label',`Подпись трека ${track.id} в легенде`);
+      input.addEventListener('input', () => {
+        track.name = input.value;
+        const cardInput = document.querySelector(`[data-track="${track.id}"] .track-name`);
+        if (cardInput) cardInput.value = track.name;
+        track.layers.markers?.forEach((m,i) => m.setTooltipContent(`${escapeHtml(track.name)} · точка ${i+1}<br>${fmt(track.points[i].lat)}, ${fmt(track.points[i].lng)}`));
+      });
+      row.append(line,input); rows.appendChild(row);
+    });
+    $('legend').style.display = $('showLegend').checked ? '' : 'none';
+  }
+
+  function fitAllTracks() {
+    const points = tracks.filter(t=>t.visible).flatMap(t=>t.points.map(p=>[p.lat,p.lng]));
+    if (!points.length) { status('На карте пока нет точек.'); return; }
+    if (points.length === 1) map.flyTo(points[0], 12, {duration:0.8});
+    else map.flyToBounds(L.latLngBounds(points).pad(0.12), {duration:0.9, maxZoom:15});
+  }
+
+  function setLayer(value) {
+    [street,satellite,hybrid].forEach(layer => { if(map.hasLayer(layer)) map.removeLayer(layer); });
+    ({street,satellite,hybrid}[value] || street).addTo(map);
+  }
+
+
+  function getProjectState() {
+    const legend = $('legend');
+    return {
+      format: 'track-comparison-map',
+      version: 1,
+      savedAt: new Date().toISOString(),
+      mapLayer: document.querySelector('.layer-switch button.active')?.dataset.layer || 'street',
+      showLegend: $('showLegend').checked,
+      smoothZoom: $('smoothZoom').checked,
+      legendPosition: {
+        left: legend.style.left || '',
+        top: legend.style.top || '',
+        right: legend.style.right || '',
+        bottom: legend.style.bottom || ''
+      },
+      tracks: tracks.map(track => ({
+        id: track.id,
+        name: track.name,
+        color: track.color,
+        weight: track.weight,
+        visible: track.visible,
+        points: track.points.map(p => ({lat:p.lat, lng:p.lng}))
+      }))
+    };
+  }
+
+  function applyProjectState(state) {
+    if (!state || !Array.isArray(state.tracks)) throw new Error('В файле не найдены данные треков.');
+    const byId = new Map(state.tracks.map(t => [Number(t.id), t]));
+    tracks.forEach(track => {
+      const saved = byId.get(track.id);
+      if (!saved) return;
+      track.name = typeof saved.name === 'string' ? saved.name : `Трек ${track.id}`;
+      track.color = palette.includes(saved.color) ? saved.color : track.color;
+      track.weight = Math.max(1, Math.min(20, Math.round(Number(saved.weight) || 4)));
+      track.visible = saved.visible !== false;
+      if (!Array.isArray(saved.points)) throw new Error(`Некорректный список точек в треке ${track.id}.`);
+      track.points = saved.points.map((p, i) => {
+        const lat = Number(p.lat), lng = Number(p.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+          throw new Error(`Некорректные координаты в треке ${track.id}, точка ${i+1}.`);
+        }
+        return {lat,lng};
+      });
+      const card = document.querySelector(`[data-track="${track.id}"]`);
+      if (card) {
+        card.querySelector('.track-name').value = track.name;
+        card.querySelector('.weight').value = track.weight;
+        card.querySelector('.visibility').checked = track.visible;
+        card.querySelectorAll('.swatch').forEach(b => b.classList.toggle('active', b.dataset.color === track.color));
+        card.querySelector('.track-state').style.background = track.color;
+      }
+      redrawTrack(track);
+      renderPoints(track);
+    });
+    if (state.showLegend !== undefined) $('showLegend').checked = !!state.showLegend;
+    if (state.smoothZoom !== undefined) {
+      $('smoothZoom').checked = !!state.smoothZoom;
+      if ($('smoothZoom').checked) map.scrollWheelZoom.enable(); else map.scrollWheelZoom.disable();
+    }
+    if (state.mapLayer) {
+      const layer = ['street','satellite','hybrid'].includes(state.mapLayer) ? state.mapLayer : 'street';
+      setLayer(layer);
+      document.querySelectorAll('.layer-switch button').forEach(b => b.classList.toggle('active', b.dataset.layer === layer));
+    }
+    if (state.legendPosition) {
+      const p = state.legendPosition;
+      const legend = $('legend');
+      legend.style.left = p.left || '';
+      legend.style.top = p.top || '';
+      legend.style.right = p.right || '';
+      legend.style.bottom = p.bottom || '';
+    }
+    renderLegend();
+    fitAllTracks();
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  $('exportJson').addEventListener('click', () => {
+    const state = getProjectState();
+    downloadBlob(new Blob([JSON.stringify(state, null, 2)], {type:'application/json;charset=utf-8'}), 'карта-треков.json');
+    status('Проект экспортирован в JSON.');
+  });
+
+  $('importJson').addEventListener('click', () => $('jsonFile').click());
+  $('jsonFile').addEventListener('change', async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const state = JSON.parse(await file.text());
+      applyProjectState(state);
+      status(`Проект «${file.name}» успешно импортирован.`);
+    } catch (error) {
+      status(`Не удалось импортировать JSON: ${error.message}`);
+    } finally {
+      e.target.value = '';
+    }
+  });
+
+  function encodeShareState(state) {
+    const bytes = new TextEncoder().encode(JSON.stringify(state));
+    let binary = '';
+    bytes.forEach(byte => binary += String.fromCharCode(byte));
+    return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  function decodeShareState(value) {
+    const base64 = value.replace(/-/g,'+').replace(/_/g,'/');
+    const binary = atob(base64);
+    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+
+  $('shareLink').addEventListener('click', async () => {
+    const encoded = encodeShareState(getProjectState());
+    const url = new URL(location.href);
+    url.search = '';
+    url.hash = `project=${encoded}`;
+    const link = url.toString();
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        const temp = document.createElement('textarea');
+        temp.value = link; temp.style.position = 'fixed'; temp.style.opacity = '0';
+        document.body.appendChild(temp); temp.select();
+        const ok = document.execCommand('copy'); temp.remove();
+        if (!ok) throw new Error('Браузер не разрешил копирование.');
+      }
+      if (location.protocol === 'file:') {
+        status('Ссылка скопирована, но для отправки другому человеку сначала разместите HTML-сервис на веб-сервере: локальный file:// адрес доступен только на вашем компьютере.');
+      } else {
+        status('Ссылка на карту скопирована. Получатель откроет её с вашими треками и настройками.');
+      }
+    } catch (error) {
+      status(`Не удалось скопировать ссылку: ${error.message}`);
+    }
+  });
+
+  function restoreFromShareUrl() {
+    const match = location.hash.match(/(?:^#|&)project=([^&]+)/);
+    if (!match) return;
+    try {
+      const state = decodeShareState(decodeURIComponent(match[1]));
+      applyProjectState(state);
+      status('Карта восстановлена из ссылки.');
+    } catch (error) {
+      status(`Не удалось загрузить карту из ссылки: ${error.message}`);
+    }
+  }
+
+  document.querySelectorAll('.layer-switch button').forEach(button => {
+    button.addEventListener('click', () => {
+      setLayer(button.dataset.layer);
+      document.querySelectorAll('.layer-switch button').forEach(b =>
+        b.classList.toggle('active', b === button)
+      );
+    });
+  });
+
+  $('smoothZoom').addEventListener('change', e => {
+    if (e.target.checked) map.scrollWheelZoom.enable(); else map.scrollWheelZoom.disable();
+  });
+  $('showLegend').addEventListener('change', renderLegend);
+  $('fitAll').addEventListener('click', fitAllTracks);
+  $('clearAll').addEventListener('click', () => {
+    if (!confirm('Удалить все точки во всех трёх треках?')) return;
+    tracks.forEach(t => { t.points=[]; redrawTrack(t); renderPoints(t); });
+    status('Все треки очищены.');
+  });
+  $('mapZoomIn').addEventListener('click', () => map.zoomIn(1,{animate:true}));
+  $('mapZoomOut').addEventListener('click', () => map.zoomOut(1,{animate:true}));
+
+  // Перетаскивание легенды мышью и на сенсорном экране.
+  (() => {
+    const el = $('legend'), parent = el.parentElement;
+    let active=false, startX=0, startY=0, left=0, top=0;
+    el.addEventListener('pointerdown', e => {
+      if (e.target.closest('input')) return;
+      if (e.button !== undefined && e.button !== 0) return;
+      const r=el.getBoundingClientRect(), pr=parent.getBoundingClientRect();
+      active=true; startX=e.clientX; startY=e.clientY;
+      left=r.left-pr.left; top=r.top-pr.top;
+      el.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    el.addEventListener('pointermove', e => {
+      if (!active) return;
+      const pr=parent.getBoundingClientRect();
+      const x=Math.max(0,Math.min(pr.width-el.offsetWidth,left+e.clientX-startX));
+      const y=Math.max(0,Math.min(pr.height-el.offsetHeight,top+e.clientY-startY));
+      el.style.left=x+'px'; el.style.top=y+'px';
+      el.style.right='auto'; el.style.bottom='auto';
+    });
+    const stop=()=>{active=false;};
+    el.addEventListener('pointerup',stop);
+    el.addEventListener('pointercancel',stop);
+  })();
+
+  $('saveImage').addEventListener('click', async () => {
+    const button=$('saveImage');
+    button.disabled=true; button.textContent='Подготовка изображения…';
+    try {
+      // Даём Leaflet время дорисовать текущий экран и загруженные тайлы.
+      await new Promise(resolve => setTimeout(resolve,700));
+      const canvas = await html2canvas($('map').parentElement, {
+        useCORS:true, allowTaint:false, backgroundColor:'#e8eef4',
+        scale:2, logging:false, imageTimeout:20000
+      });
+      const link=document.createElement('a');
+      link.download='сравнение-треков.png';
+      link.href=canvas.toDataURL('image/png');
+      link.click();
+      status('Изображение карты подготовлено и сохранено.');
+    } catch (error) {
+      console.error(error);
+      status('Не удалось экспортировать карту. Возможно, выбранный картографический слой запрещает захват тайлов браузером. Попробуйте слой «Карта» или сделайте снимок экрана.');
+    } finally {
+      button.disabled=false; button.textContent='↓ Сохранить карту как изображение';
+    }
+  });
+
+  tracks.forEach(makeTrackCard);
+  tracks.forEach(renderPoints);
+  renderLegend();
+  map.scrollWheelZoom.enable();
+  restoreFromShareUrl();
+  setTimeout(()=>map.invalidateSize(),100);
+})();
+</script>
+</body>
+</html>
