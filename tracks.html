@@ -101,6 +101,7 @@
     </div>
     <input type="file" id="jsonFile" accept=".json,application/json" hidden>
     <button class="btn full" id="shareLink" style="margin-top:7px">⧉ Скопировать ссылку на карту</button>
+    <p class="hint" style="margin-top:7px">Автосохранение включено: точки и настройки сохраняются в этом браузере автоматически.</p>
 
     <div class="section-title">Действия</div>
     <div class="btn-row">
@@ -168,6 +169,37 @@
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[ch]));
   const fmt = n => Number(n).toFixed(6);
+
+
+  const AUTOSAVE_KEY = 'trackComparisonMap.autosave.v1';
+  let autosaveTimer = null;
+
+  function scheduleAutosave() {
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => {
+      try {
+        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(getProjectState()));
+      } catch (error) {
+        console.warn('Автосохранение недоступно:', error);
+        status('Не удалось выполнить автосохранение. Проверьте настройки хранения браузера.');
+      }
+    }, 180);
+  }
+
+  function restoreAutosave() {
+    try {
+      const raw = localStorage.getItem(AUTOSAVE_KEY);
+      if (!raw) return false;
+      const state = JSON.parse(raw);
+      applyProjectState(state);
+      status('Последняя карта восстановлена из автосохранения этого браузера.');
+      return true;
+    } catch (error) {
+      console.warn('Не удалось восстановить автосохранение:', error);
+      status('Не удалось восстановить автосохранение. Можно загрузить резервный JSON-файл.');
+      return false;
+    }
+  }
 
   function makeTrackCard(track) {
     const card = document.createElement('section');
@@ -252,6 +284,7 @@
     card.querySelector('.track-name').addEventListener('input', e => {
       track.name = e.target.value.trim() || `Трек ${track.id}`;
       renderLegend();
+      scheduleAutosave();
     });
     card.querySelector('.weight').addEventListener('change', e => {
       const value = Math.round(Number(e.target.value));
@@ -315,6 +348,7 @@
       track.layers.markers.push(marker);
     });
     renderLegend();
+    scheduleAutosave();
   }
 
   function renderPoints(track) {
@@ -393,6 +427,10 @@
       mapLayer: document.querySelector('.layer-switch button.active')?.dataset.layer || 'street',
       showLegend: $('showLegend').checked,
       smoothZoom: $('smoothZoom').checked,
+      mapView: {
+        center: [map.getCenter().lat, map.getCenter().lng],
+        zoom: map.getZoom()
+      },
       legendPosition: {
         left: legend.style.left || '',
         top: legend.style.top || '',
@@ -458,7 +496,15 @@
       legend.style.bottom = p.bottom || '';
     }
     renderLegend();
-    fitAllTracks();
+    if (state.mapView && Array.isArray(state.mapView.center) &&
+        state.mapView.center.length === 2 &&
+        state.mapView.center.every(Number.isFinite) &&
+        Number.isFinite(Number(state.mapView.zoom))) {
+      map.setView(state.mapView.center, Number(state.mapView.zoom), {animate:false});
+    } else {
+      fitAllTracks();
+    }
+    scheduleAutosave();
   }
 
   function downloadBlob(blob, filename) {
@@ -482,7 +528,8 @@
     try {
       const state = JSON.parse(await file.text());
       applyProjectState(state);
-      status(`Проект «${file.name}» успешно импортирован.`);
+      scheduleAutosave();
+      status(`Проект «${file.name}» успешно импортирован и сохранён в автосохранении.`);
     } catch (error) {
       status(`Не удалось импортировать JSON: ${error.message}`);
     } finally {
@@ -531,13 +578,15 @@
 
   function restoreFromShareUrl() {
     const match = location.hash.match(/(?:^#|&)project=([^&]+)/);
-    if (!match) return;
+    if (!match) return false;
     try {
       const state = decodeShareState(decodeURIComponent(match[1]));
       applyProjectState(state);
       status('Карта восстановлена из ссылки.');
+      return true;
     } catch (error) {
       status(`Не удалось загрузить карту из ссылки: ${error.message}`);
+      return false;
     }
   }
 
@@ -547,18 +596,21 @@
       document.querySelectorAll('.layer-switch button').forEach(b =>
         b.classList.toggle('active', b === button)
       );
+      scheduleAutosave();
     });
   });
 
   $('smoothZoom').addEventListener('change', e => {
     if (e.target.checked) map.scrollWheelZoom.enable(); else map.scrollWheelZoom.disable();
+    scheduleAutosave();
   });
-  $('showLegend').addEventListener('change', renderLegend);
+  $('showLegend').addEventListener('change', () => { renderLegend(); scheduleAutosave(); });
   $('fitAll').addEventListener('click', fitAllTracks);
   $('clearAll').addEventListener('click', () => {
     if (!confirm('Удалить все точки во всех трёх треках?')) return;
     tracks.forEach(t => { t.points=[]; redrawTrack(t); renderPoints(t); });
-    status('Все треки очищены.');
+    scheduleAutosave();
+    status('Все треки очищены. Пустая карта сохранена в автосохранении.');
   });
   $('mapZoomIn').addEventListener('click', () => map.zoomIn(1,{animate:true}));
   $('mapZoomOut').addEventListener('click', () => map.zoomOut(1,{animate:true}));
@@ -584,7 +636,7 @@
       el.style.left=x+'px'; el.style.top=y+'px';
       el.style.right='auto'; el.style.bottom='auto';
     });
-    const stop=()=>{active=false;};
+    const stop=()=>{ if(active) scheduleAutosave(); active=false; };
     el.addEventListener('pointerup',stop);
     el.addEventListener('pointercancel',stop);
   })();
@@ -616,7 +668,8 @@
   tracks.forEach(renderPoints);
   renderLegend();
   map.scrollWheelZoom.enable();
-  restoreFromShareUrl();
+  map.on('moveend zoomend', scheduleAutosave);
+  if (!restoreFromShareUrl()) restoreAutosave();
   setTimeout(()=>map.invalidateSize(),100);
 })();
 </script>
